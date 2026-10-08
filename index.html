@@ -1,0 +1,777 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Castaway Daily</title>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1628;--deep:#081120;--panel:#0f1d33;--line:#1e3354;--ink:#dce8f5;--dim:#6f86a3;--cyan:#5ee1ff;--pink:#ff5c8a;--gold:#ffc94d}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at 50% 0%,#17365a 0%,var(--bg) 55%,var(--deep) 100%);color:var(--ink);font-family:'VT323',monospace;font-size:20px}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);z-index:50}
+html,body{overflow-x:hidden}#app{max-width:var(--appw,760px);margin:0 auto;padding:14px 16px 40px;overflow-x:hidden}
+.hud{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:10px;margin-bottom:12px}
+.panel{background:var(--panel);padding:8px 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);box-shadow:inset 0 0 0 2px var(--line)}
+.lbl{font-family:'Silkscreen';font-size:10px;letter-spacing:3px;color:var(--dim)}
+.val{font-family:'Silkscreen';font-size:26px;color:var(--cyan);text-shadow:0 0 10px rgba(94,225,255,.5)}
+.right{text-align:right}.right .val{color:var(--pink);text-shadow:0 0 10px rgba(255,92,138,.5)}
+.pips{display:flex;gap:4px;justify-content:center;padding-top:6px}.pip{width:16px;height:16px;background:#162843;box-shadow:inset 0 0 0 2px #0a1424}
+.pips+.lbl{text-align:center;margin-top:6px;font-size:9px}
+#stage{position:relative}
+canvas#cv{width:100%;image-rendering:pixelated;display:block;cursor:crosshair;box-shadow:0 0 0 2px var(--line),0 20px 60px rgba(0,0,0,.5)}
+#reveal{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(circle,rgba(8,17,32,.75) 0%,rgba(8,17,32,.35) 60%,transparent 80%)}
+#reveal.on{opacity:1}
+#reveal img{width:96px;height:96px;image-rendering:pixelated;animation:float 2s ease-in-out infinite}
+#rname{font-family:'Silkscreen';font-size:30px;letter-spacing:6px;margin-top:10px}
+#rrar{font-family:'Silkscreen';font-size:12px;letter-spacing:4px;margin-top:4px}
+#rflav{color:var(--dim);letter-spacing:2px;margin-top:6px;font-size:18px;text-align:center;padding:0 10px}
+@keyframes float{50%{transform:translateY(-6px)}}
+#hint{text-align:center;font-family:'Silkscreen';font-size:12px;letter-spacing:4px;color:var(--cyan);margin:14px 0;animation:blink 1.4s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+#log{text-align:center;color:var(--dim);letter-spacing:1px;min-height:28px;margin:10px 0}
+#log b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.it{background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);padding:8px 4px 6px;text-align:center;cursor:pointer;font-size:16px;line-height:1;transition:transform .1s}
+.it:hover{transform:translateY(-2px)}
+.it img{width:44px;height:44px;image-rendering:pixelated;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 4px rgba(94,225,255,.25))}
+.it .p{color:var(--cyan);font-size:14px;margin-top:3px}
+.it.sel{box-shadow:inset 0 0 0 2px var(--cyan),0 0 16px rgba(94,225,255,.35)}.it.new{animation:pop .4s}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.15)}}
+.hide{display:none!important}
+.btn{display:block;margin:18px auto 0;font-family:'Silkscreen';font-size:14px;letter-spacing:4px;color:var(--ink);background:var(--panel);border:3px solid var(--cyan);padding:14px 28px;cursor:pointer;box-shadow:0 0 18px rgba(94,225,255,.3)}
+h3{font-family:'Silkscreen';font-size:12px;letter-spacing:4px;color:var(--dim);margin:22px 0 10px;text-align:center}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats .panel{text-align:center}
+table{width:100%;border-collapse:collapse;font-size:20px}td{padding:6px 8px;border-bottom:2px solid var(--line)}tr.you{color:var(--pink)}
+
+#reveal{position:fixed;z-index:40}
+#craftUI{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:10px;height:72vh;min-height:420px}
+#ws{position:relative;overflow:hidden;touch-action:none;box-shadow:inset 0 0 0 2px var(--line);background:#2c4257 !important;
+ background:radial-gradient(ellipse at 50% 55%,#3f8f5f 0%,#2f7a55 30%,#c9ae6e 46%,#d9bf7f 52%,#3d86a8 60%,#1c4a6e 75%,#0e2540 100%)}
+#hintBtn{position:absolute;top:8px;left:8px;font-family:'Silkscreen';font-size:10px;letter-spacing:2px;background:var(--panel);color:var(--gold);border:2px solid var(--line);padding:6px 10px;cursor:pointer;z-index:5}
+.el.can img{filter:drop-shadow(0 0 3px rgba(255,201,77,.55)) drop-shadow(0 3px 2px rgba(0,0,0,.35))}
+.li{position:relative}.cnt{margin-left:6px;font-size:13px;color:#0b1628;background:var(--gold);padding:0 5px;border-radius:2px}.cnt.done{display:none}
+#list{position:relative}#ws,#side{min-width:0}
+body.crafting{overscroll-behavior:none}body.crafting #viewBtn{display:none}
+body.crafting #app{height:100dvh;display:flex;flex-direction:column;padding-bottom:10px;overflow:hidden}
+body.crafting #craftUI{flex:1;min-height:0;height:auto}
+body.crafting #log{height:24px;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.btn2{display:block;margin:10px auto 0;font-family:'Silkscreen';font-size:11px;letter-spacing:3px;color:var(--gold);background:transparent;border:2px solid var(--line);padding:10px 18px;cursor:pointer}
+.basics{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}.basics img{width:28px;height:28px;image-rendering:pixelated;display:block;margin:0 auto}.basics small{display:block;font-size:13px;color:var(--dim);text-align:center}
+.codex{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}.cxscroll{max-height:58vh;overflow:auto;padding-right:4px}
+.cxh{display:flex;justify-content:space-between;font-family:'Silkscreen';font-size:10px;letter-spacing:2px;color:var(--cyan);margin:14px 0 6px;border-bottom:2px solid var(--line);padding-bottom:4px}.cxh span{color:var(--dim)}
+.cx.miss img{filter:brightness(0);opacity:.35}.cx.miss span{color:#3d5070}
+.cxbar{height:8px;background:#162843;margin-top:4px}.cxbar i{display:block;height:100%;background:var(--gold)}
+.cx{text-align:center;font-size:13px;padding:4px 2px;background:#162843}.cx img{width:32px;height:32px;image-rendering:pixelated;display:block;margin:0 auto 2px}.cx.nw{box-shadow:inset 0 0 0 2px var(--gold)}
+.motiv{margin:14px auto 0;padding:10px;max-width:420px;background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);color:var(--ink)}
+.ecard{max-width:360px;margin:6px auto 0;padding:18px 16px;text-align:center;background:var(--panel);box-shadow:inset 0 0 0 2px var(--line),0 0 40px rgba(94,225,255,.12);display:flex;flex-direction:column;align-items:center;gap:6px}
+#eBest img{width:84px;height:84px;image-rendering:pixelated;filter:drop-shadow(0 0 12px rgba(255,201,77,.5));margin:6px 0 2px}#eBest b{font-family:'Silkscreen';font-size:18px;color:var(--gold);letter-spacing:2px}
+.escore{font-family:'Silkscreen';font-size:44px;color:var(--pink);text-shadow:0 0 14px rgba(255,92,138,.5);line-height:1;margin-top:8px}.escore small{font-size:12px;margin-left:6px;color:var(--dim);text-shadow:none}
+.ecatch{display:flex;gap:6px;margin:8px 0 2px}.ecatch span{padding:4px;box-shadow:inset 0 0 0 2px var(--rc)}.ecatch img{width:30px;height:30px;image-rendering:pixelated;display:block}
+#eFinds{color:var(--dim);font-size:18px}#eFinds b{color:var(--cyan)}
+.ebtns{max-width:360px;margin:12px auto 0;display:flex;flex-direction:column;gap:2px}.ebtns .btn{margin:0;width:100%}.ebtns .btn2{width:100%;margin:6px 0 0}
+#fNote{text-align:center;color:var(--dim);margin-top:10px;font-size:17px}
+.bmc{display:block;width:max-content;max-width:100%;margin:14px auto 0;padding:8px 14px;color:var(--gold);text-decoration:none;font-size:17px;border:2px dashed var(--line)}.bmc:hover{border-color:var(--gold)}
+.flash{position:fixed;inset:0;z-index:45;pointer-events:none;background:radial-gradient(circle,var(--fc) 0%,transparent 70%);opacity:0;animation:fl .9s ease-out}@keyframes fl{15%{opacity:.55}100%{opacity:0}}
+canvas.shake{animation:shk .12s linear infinite}@keyframes shk{25%{transform:translate(-2px,1px)}75%{transform:translate(2px,-1px)}}
+.el.tut img{animation:tutp 1s ease-in-out infinite}@keyframes tutp{50%{transform:scale(1.18);filter:drop-shadow(0 0 6px var(--gold))}}
+.teaser{display:flex;gap:10px;justify-content:center;margin-top:4px}.teaser div{text-align:center;font-size:13px;color:#3d5070}.teaser img{width:30px;height:30px;image-rendering:pixelated;filter:brightness(0);opacity:.45;display:block;margin:0 auto}
+#help{position:fixed;inset:0;z-index:70;background:rgba(5,10,20,.82);display:flex;align-items:center;justify-content:center;padding:16px}
+#help .box{background:var(--panel);box-shadow:inset 0 0 0 2px var(--cyan),0 0 40px rgba(94,225,255,.25);max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:20px 22px;line-height:1.25}
+#help h4{font-family:'Silkscreen';font-size:16px;letter-spacing:3px;color:var(--cyan);margin:0 0 12px}
+#help ul{padding-left:0;list-style:none;margin:0}#help li{margin:9px 0;padding-left:30px;position:relative}#help li i{position:absolute;left:0;font-style:normal}
+#help .btn{margin-top:16px}.demo{display:inline-block;font-size:12px;padding:0 5px;color:#0b1628;background:var(--gold)}
+.q{float:right;cursor:pointer;color:var(--cyan);border:2px solid var(--line);padding:0 6px}
+.maxhead{grid-column:1/-1;grid-row:auto;font-family:'Silkscreen';font-size:9px;letter-spacing:3px;color:#ff8fab;padding:8px 6px 4px;border-top:2px solid var(--line);margin-top:4px}
+.li.maxed{opacity:.45;filter:grayscale(.8)}.li.maxed::after{content:"MAXED";font-family:'Silkscreen';font-size:8px;color:#ff8fab;margin-left:auto}
+.el.fading{transition:opacity .6s,transform .6s;opacity:0;transform:translate(-50%,-50%) scale(.6);pointer-events:none}
+#ws::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:16px 16px;pointer-events:none}
+#wsHint{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:rgba(220,232,245,.75);font-size:16px;pointer-events:none;padding:0 10px;text-shadow:0 1px 2px #000}
+#clear{position:absolute;top:8px;right:8px;font-family:'Silkscreen';font-size:10px;letter-spacing:2px;background:var(--panel);color:var(--ink);border:2px solid var(--line);padding:6px 10px;cursor:pointer;z-index:5}
+.el{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;z-index:2}
+.el img{width:52px;height:52px;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(1px 0 0 rgba(8,14,26,.7)) drop-shadow(-1px 0 0 rgba(8,14,26,.7)) drop-shadow(0 1px 0 rgba(8,14,26,.7)) drop-shadow(0 -1px 0 rgba(8,14,26,.7)) drop-shadow(0 3px 2px rgba(0,0,0,.35));transition:transform .1s}
+.el span{margin-top:2px}
+#sea{position:absolute;left:0;right:0;bottom:0;height:64px;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;
+ font-family:'Silkscreen';font-size:10px;letter-spacing:3px;color:#cdefff;background:repeating-linear-gradient(90deg,#2a6fb0 0 14px,#2f7cc2 14px 28px);background-size:28px 100%;
+ animation:waves 2s linear infinite;box-shadow:inset 0 4px 0 #8fd3ff,inset 0 6px 0 #5ab0e6;transition:height .15s}
+#sea.hot{height:84px;box-shadow:inset 0 4px 0 #fff,inset 0 0 30px #8fd3ff}@keyframes waves{to{background-position:28px 0}}
+.el.sinking{animation:sinkA .5s forwards;pointer-events:none}@keyframes sinkA{to{transform:translate(-50%,10%) scale(.3);opacity:0}}
+.el span{font-size:15px;color:#fff;text-shadow:0 1px 0 #000,0 0 4px #000;white-space:nowrap;pointer-events:none}
+.el.drag{z-index:10;cursor:grabbing}.el.drag img{transform:scale(1.15)}
+.el.target img{transform:scale(1.12);filter:drop-shadow(0 0 4px rgba(94,225,255,.8)) drop-shadow(0 3px 2px rgba(0,0,0,.35))}
+.el.pop{animation:pop2 .35s}@keyframes pop2{0%{transform:translate(-50%,-50%) scale(.2)}70%{transform:translate(-50%,-50%) scale(1.2)}}
+.el.shake{animation:shake .3s}@keyframes shake{25%{margin-left:-4px}75%{margin-left:4px}}
+#side{background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);display:flex;flex-direction:column;min-height:0}
+#sideHead{padding:8px 10px;font-family:'Silkscreen';font-size:10px;letter-spacing:2px;color:var(--dim);border-bottom:2px solid var(--line)}
+#list{overflow-y:auto;flex:1;padding:4px}
+.li{display:flex;align-items:center;gap:8px;padding:4px 6px;cursor:grab;user-select:none;-webkit-user-select:none;font-size:17px;touch-action:pan-y}
+.li:hover{background:#162843}.li img{width:30px;height:30px;image-rendering:pixelated;pointer-events:none}
+.li .pt{margin-left:auto;color:var(--cyan);font-size:14px}.li.new{animation:flash 1s}@keyframes flash{0%{background:#2a5a7a}}
+@media (max-width:640px){
+ body.crafting{position:fixed;inset:0;overflow:hidden}
+ #ws,#side,#list{min-width:0;max-width:100%}
+ #list{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+ body.crafting #craftUI{grid-template-rows:minmax(0,1fr) 230px}
+ body.crafting #list{touch-action:pan-x}
+ .li.maxed,.maxhead{display:none!important}
+ .el img{width:36px!important;height:36px!important}.el span{font-size:11px!important}
+ #sea{height:46px!important}#sea.hot{height:62px!important}
+ #app{padding:10px 12px 20px}.hud{gap:6px;margin-bottom:8px}.panel{padding:6px 10px}.val{font-size:20px}
+ .lbl{letter-spacing:1px;font-size:8px}.pip{width:12px;height:12px}#phaseLbl,#dayLbl{max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-inline:auto}
+ #hint{margin:8px 0;font-size:10px;letter-spacing:2px}#log{margin:6px 0;font-size:17px}
+ .maxhead{grid-row:1/-1;writing-mode:vertical-rl;border-top:0;border-left:2px solid var(--line);padding:4px}
+ .li.maxed::after{margin:0}
+ #craftUI{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 34vh;height:calc(100dvh - 150px);min-height:0}
+ #list{display:grid;grid-auto-flow:column;grid-template-rows:repeat(3,1fr);grid-auto-columns:78px;gap:2px;overflow-x:auto;overflow-y:hidden}
+ .li{flex-direction:column;gap:2px;font-size:13px;text-align:center;padding:4px 2px;touch-action:pan-x}
+ .cnt{position:absolute;top:2px;right:2px;margin:0;font-size:11px}.li .pt{margin:0}
+ .el img{width:44px;height:44px}.el span{font-size:13px}
+}
+</style></head><body><div id="app">
+<div class="hud">
+ <div class="panel"><div class="lbl" id="lblL">CASTS</div><div class="val" id="valL">5</div></div>
+ <div><div class="pips" id="pips"></div><div class="lbl" id="phaseLbl">CAST 1 OF 5</div><div class="lbl" style="text-align:center;font-size:8px;margin-top:4px" id="dayLbl"></div></div>
+ <div class="panel right"><div class="lbl">SCORE</div><div class="val" id="score">0</div></div>
+</div>
+<div id="stage"><canvas id="cv" width="240" height="150"></canvas>
+ <div id="reveal"><img id="rimg"><div id="rname"></div><div id="rrar"></div><div id="rflav"></div></div></div>
+<div id="hint">▼ TAP WATER TO CAST ▼</div>
+<div id="log"></div>
+<div id="craftUI" class="hide"><div id="ws"><button id="clear">CLEAR</button><button id="hintBtn">HINT (3)</button><div id="sea">≈ DROP TO CLEAR ≈</div></div><div id="side"><div id="sideHead"></div><div id="list"></div></div></div>
+<div id="endUI" class="hide"><div class="ecard">
+ <div class="lbl" id="eDate"></div>
+ <div id="eBest"></div>
+ <div class="escore"><span id="fScore"></span><small>PTS</small></div>
+ <div class="lbl" id="ePct"></div>
+ <div class="ecatch" id="eCatch"></div>
+ <div id="eFinds"></div>
+</div>
+<div class="ebtns"><button class="btn" id="shareBtn">SHARE</button><button class="btn2" id="codexEnd">MY COLLECTION</button><button class="btn2" id="againBtn" onclick="location.reload()">PLAY AGAIN (TEST)</button></div>
+<div id="fNote"></div><a class="bmc" href="https://buymeacoffee.com/juulian" target="_blank" rel="noopener">☕ Enjoying the game? Buy me a coffee</a></div>
+</div>
+<script>
+const rnd=Math.random;
+const HT=location.hash.slice(1).split('-');const DEV=true; // set to false at launch: locks the game after one play per day
+let RANDOM=true;
+const VIEW=HT.includes('desktop')?'desktop':HT.includes('mobile')?'mobile':'auto';
+if(VIEW==='desktop'){try{let m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m)}m.content='width=1000'}catch(e){}}
+if(VIEW==='mobile'){for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.media&&r.media.mediaText.includes('640'))r.media.mediaText='all'}catch(e){}}
+  document.documentElement.style.setProperty('--appw','430px')}
+function setHash(){const t=[];if(RANDOM)t.push('random');if(VIEW!=='auto')t.push(VIEW);return t.join('-')}
+function zurichParts(){const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Zurich',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return p}
+const TODAY=(()=>{try{const p=zurichParts();return `${p.year}-${p.month}-${p.day}`}catch(e){return new Date().toISOString().slice(0,10)}})();
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let PID=store.get('cw_pid',null);if(!PID){PID=Math.random().toString(36).slice(2,10);store.set('cw_pid',PID)}
+let _sd=[...(TODAY+'|'+PID)].reduce((a,c)=>Math.imul(a^c.charCodeAt(0),2654435761)>>>0,1234567);
+const drnd=()=>{_sd|=0;_sd=_sd+0x6D2B79F5|0;let q=Math.imul(_sd^_sd>>>15,1|_sd);q=q+Math.imul(q^q>>>7,61|q)^q;return((q^q>>>14)>>>0)/4294967296};
+// ---------- palette + 8x8 sprites ----------
+const PAL={c:'#f2d492',t:'#c89b5b',b:'#8d5524',d:'#5c3a17',g:'#52b788',G:'#2d6a4f',l:'#a8dadc',B:'#3a86ff',s:'#adb5bd',S:'#6c757d',w:'#f8f9fa',y:'#ffd60a',o:'#fb8500',r:'#e63946',p:'#f4a6c1',P:'#9d4edd',k:'#111111',f:'#ffcba4'};
+const SP={
+Sand:["........","..cccc..",".cctccc.","cccccctc","ctcccccc","cccctccc",".cccccc.","........"],
+Water:["...l....","...l....","..lBl...","..lBl...",".lBBBl..",".lBwBl..","..lBl...","........"],
+Sun:["y..y..y.","..yyy...","yyoooyy.",".yoooy..","yyoooyy.","..yyy...","y..y..y.","........"],
+Wood:["........","........","bbbbbbtt","bdbbbbtc","bbbbdbtt","bbbbbbtt","........","........"],
+Seaweed:["..g..G..",".gG.gG..",".gG..G..","..gG.gG.","..gG.G..",".gG..gG.",".G..gG..","..G..G.."],
+Stone:["........","..ssss..",".ssswss.","sssssssS","ssSssssS",".SSSSSS.","........","........"],
+Shell:["...pp...","..pwpp..",".pwpwpp.","pwpwpwpp","pppppppp",".pppppp.","...pp...","........"],
+Fish:["........","..BBBB.B",".BBBBBBB","BkBBBBB.","BBBBBBB.",".BlllBBB","..BBBB.B","........"],
+Starfish:["...o....","...o....","oooooooo",".oooooo.","..oooo..",".oo..oo.","o......o","........"],
+Rope:["..tt....",".t..t...",".t..t...","..tt.t..",".....t..","..tttt..",".t......","..ttt..."],
+Bottle:["...ss...","...gg...","..gggg..",".gglggg.",".gglggg.",".gggggg.",".gggggg.","..gggg.."],
+Coconut:["........","..dddd..",".dbdbdd.","ddbddbdd","dddddbdd","dbdddddd",".dddddd.","..dddd.."],
+Crab:["r......r",".r.rr.r.","..rrrr..",".rkrrkr.","rrrrrrrr",".rrrrrr.","r.r..r.r","........"],
+Pearl:["........","..wwww..",".wwwwls.",".wwwwws.",".wwwwws.",".swwwss.","..ssss..","........"],
+Compass:["..yyyy..",".yccccy.","yccrcccy","yccrcccy","ycccBccy","ycccBccy",".yccccy.","..yyyy.."],
+"Old Map":["tttttttt","tcccrccd","tccccrcd","tcBcccrd","tcccccrd","tcccrkcd","tcccccct","dddddddd"],
+"Golden Idol":["..yyyy..",".yoyyoy.",".ykyyky.",".yyyyyy.","..yooy..","..yyyy..",".yyyyyy.",".oooooo."],
+Glass:["..llll..",".lwlllw.",".llllll.",".lwlllw.",".llllll.",".lllwll.","..llll..","........"],
+Fire:["...r....","..rr.r..","..ror.r.",".rooorr.",".royyor.","rroyyorr",".rooorr.","..dddd.."],
+Mud:["........","........","..dbb...",".dbbbdb.","dbbdbbbd","dbbbbdbd",".dddddd.","........"],
+Steam:[".w..w...","w..w..w.",".w..w.w.","w.w..w..",".w.w..w.","..w..w..","........","........"],
+Rainbow:["........","..rrrr..",".roooor.","royyyyor","oyg..gyo","yg....gy","g......g","........"],
+Axe:["..sss...",".sssss..",".ssSsb..","..s.b...","....b...","....b...","....b...","....d..."],
+Planks:["........","tttttttt","bbbbbbbb","dddddddd","tttttttt","bbbbbbbb","dddddddd","........"],
+Brick:["........","rrrr.rrr","SSSSSSSS","rr.rrrr.","SSSSSSSS","rrrr.rrr","........","........"],
+Torch:["...r....","..ror...","..oyo...","...t....","...b....","...b....","...b....","...d...."],
+Furnace:["...SS...","...SS...","ssssssss","sSsssSss","ssorrsss","sorryros","ssssssss","SSSSSSSS"],
+Hut:["...tt...","..tttt..",".tttttt.","tttttttt",".bbbbbb.",".bbddbb.",".bbddbb.",".bbddbb."],
+House:["...rr...","..rrrr..",".rrrrrr.","rrrrrrrr",".tttttt.",".tlttdt.",".ttttdt.",".ttttdt."],
+"Cozy Hut":["...tt.s.","..tttts.",".tttttts","tttttttt",".bbbbbb.",".byddyb.",".bbddbb.",".bbddbb."],
+Raft:["........","dbdbdbdb","bbbbbbbb","tttttttt","bbbbbbbb","tttttttt","dbdbdbdb","........"],
+Necklace:["t......t",".t....t.",".t....t.","..t..t..","..tttt..","...pp...","..pwpp..","...pp..."],
+"Royal Necklace":["y......y",".y....y.",".y....y.","..y..y..","..yyyy..","...ww...","..wwww..","...ww..."],
+"Fresh Water":["...ss...","...ll...","..llll..",".lwllll.",".lBBBBl.",".lBBBBl.",".lBBBBl.","..llll.."],
+"Coconut Milk":["..g.....","..dddd..",".dwwwwd.","dwwwwwwd","ddddbddd","dbdddddd",".dddddd.","..dddd.."],
+"Palm Tree":["gg.GG.gg","..gGGg..",".gg.b.gg","....b...","....b...","....b...","...bb...",".cccccc."],
+"Beach Villa":["...rr...","..rrrr..",".rrrrrr.","rrrrrrrr",".wwwwww.",".wlwwdw.",".wwwwdw.","gccccccg"],
+Lens:["........","..yyyy..",".yllwly.",".ylllly.",".ylwlly.",".ylllly.","..yyyy..","........"],
+Lighthouse:["...yy...","..ssss..","...rr...","...ww...","..rrrr..","..wwww..",".rrrrrr.","ssssssss"],
+"Treasure Route":["tttttttt","tcrrcccd","tccrcccd","tcccrrcd","tccccrcd","tccckkcd","tccckkcd","dddddddd"],
+"Treasure Chest":["........",".dddddd.","dbbbbbbd","dyyyyyyd","dbbkkbbd","dbbbbbbd","dbbbbbbd","dddddddd"],
+"Sacred Temple":["...yy...","..yyyy..","yyyyyyyy",".s.s.s.s",".s.s.s.s",".s.s.s.s",".s.s.s.s","ssssssss"],
+Ship:["...w....","..ww.w..",".www.ww.","wwww.www","...b....","dbbbbbbd",".dbbbbd.","..BBBB.."],
+"Trade Empire":["........","y..y..y.","yy.y.yy.","yyyyyyy.","yrybyry.","yyyyyyy.","oooooo o".replace(' ','.'),"........"],
+Sandcastle:["c.c..c.c","ccc..ccc","ccc..ccc","cccccccc","cctcctcc","cccddccc","cccddccc","cccccccc"],
+"Royal Sandcastle":["..o..o..","c.co.c.c","ccc..ccc","cccccccc","cctcctcc","cccddccc","cccddccc","yyyyyyyy"],
+"Grilled Fish":["........","..oooo.o",".odododo","okooooo.","ooooooo.","..oooo.o","ssssssss","........"],
+Aquarium:["llllllll","l......l","l..o...l","l.ooo..l","l..o.g.l","l....g.l","lccccccl","llllllll"],
+"Crab Feast":["r......r",".r.rr.r.","..rrrr..",".rrrrrr.","wwwwwwww",".swwwws.","..ssss..","........"],
+"Seaweed Chips":["........",".G.g.G..","GgGgGgG.",".gGgGg..","wwwwwwww",".wwwwww.","..wwww..","........"],
+"Island Feast":[".o..r...","oooorrr.","wwwwwwww",".wwwwww.","..wwww..","...ss...","..ssss..","........"],
+Tavern:["...rr...","..rrrr..",".rrrrrr.","rrrrrrrr",".byybyb.",".bbddbb.",".bbddbb.","oooooooo"],
+"Fishing Net":["t.t.t.t.",".t.t.t.t","t.t.t.t.",".t.t.t.t","t.t.t.t.",".t.t.t.t","t.t.t.t.",".t.t.t.t"],
+"Fishing Boat":["..t.....","..tw....","..tww...","..twww..","..t.....","dbbbbbbd",".dbbbbd.","..BBBB.."],
+"Gold Bars":["........","........","..yyyy..",".yoyyoy.","yyyyyyyy","yoyyoyyy","oooooooo","........"],
+"Pirate Hoard":["y.yy.y.y",".yyyyyy.","dyyyyyyd","dyyyyyyd","dbbkkbbd","dbbbbbbd","dbbbbbbd","dddddddd"],
+Oyster:["........",".ssssss.","sSssssSs","swwwwwws","swwwwlws","sSssssSs",".ssssss.","........"],
+"Message in a Bottle":["...ss...","...gg...","..gggg..",".gtttgg.",".gtcttg.",".gtttgg.",".gggggg.","..gggg.."],
+"Rainbow Pearl":["........","..rooy..",".rwwwwg.",".owwwwB.",".ywwwwP.",".gwwwwP.","..BBPP..","........"],
+Bridge:["........","t......t","tt....tt","bbbbbbbb","dbdbdbdb","t......t","t......t","BBBBBBBB"],
+Harbor:["...yy...","..rr....","..ww.bbb","..rr.bbb","BBBBBBBB","bbbbbbbB","BBBBBBBB","BBBBBBBB"],
+"Port City":["r..rr..r","rr.rrrrr","wwrwwwrw","wdwwdwww","wwwwwwww","bbbbbbbb","BBBBBBBB","BBBBBBBB"],
+"Wind Chime":["bbbbbbbb",".t..t..t",".t..t..t",".p..t..p",".p..p..p","....p...","........","........"],
+"Hermit Crab":["........","..pppp..",".pwpwpp.","pppppppp","rrrrrrrr","rkrrrkrr",".r.rr.r.","........"],
+Hammock:["b......b","b......b","bt....tb","b.tttt.b","b.tttt.b","b......b","b......b","b......b"],
+Paradise:["gg.GG...","..gGg.y.",".g.b.yyy","...b..y.","..ttt.ww","..ttt.ww","...b....","cccccccc"],
+"Tide Pool":["..ssss..",".sllllS.","sllolllS","slllllgS","sllglllS","sllllolS",".SllllS.","..SSSS.."],
+Sundial:["........","...k....","..sk....",".ssssss.","sccccccs","sckcckcs",".ssssss.","........"],
+Squid:["..PPPP..",".PPPPPP.",".PwPPwP.",".PkPPkP.",".PPPPPP.","P.P.P.P.","P.P..P.P",".P..P..."],
+Jellyfish:["..pppp..",".pwpppp.","pppppppp","pppppppp",".p.p.p.p",".p.p.p..","p..p..p.",".p..p..."],
+Feather:[".......w","......ww",".....wsw","....wsw.","...wsw..","..wsw...",".ww.....","s......."],
+Anchor:["...SS...","..S..S..","...SS...","SSSSSSSS","...SS...","S..SS..S","SS.SS.SS",".SSSSSS."],
+Cloth:["wwwwwww.","wrwwrww.","wwwwwwww","wwrwwrww","wwwwwwww",".wrwwrww",".wwwwwww","........"],
+Seeds:["........","..t..t..",".tdt.tdt","..t..t..","t...t...","dt.tdt..",".t..t...","........"],
+"Sea Urchin":["P.P..P.P",".PPPPPP.","PPPPPPPP",".PPkPPP.","PPPPPPPP",".PPPPPP.","P.P..P.P","........"],
+"Tin Can":["..ssss..",".sSSSSs.",".srrrrs.",".swwwws.",".srrrrs.",".srrrrs.",".sSSSSs.","..ssss.."],
+"Mermaid Scale":["...ll...","..lgBl..",".lgBgBl.","lgBgBgBl",".lgBgBl.","..lgBl..","...ll...","........"],
+Trident:["y..y..y.","y..y..y.","yyyyyyy.","...y....","...y....","...y....","...y....","...o...."],
+Ink:["...ss...","..kkkk..",".kkPkkk.",".kkkkkk.",".kkkkkk.",".kkkkkk.","..kkkk..","........"],
+Quill:[".......w","......ww",".....wsw","....wsw.","...wsw..","..kw....",".k......","k......."],
+Journal:["dddddddd","dttttttd","dtkktttd","dttttttd","dtkkkttd","dttttttd","dttttttd","dddddddd"],
+"Explorer's Log":["dddddddd","dyttttyd","dtkktttd","dttBtttd","dtkkkttd","dttttrtd","dyttttyd","dddddddd"],
+Sail:["...b....","...bw...","...bww..","...bwww.","...bwwww","...bwww.","...b....","...b...."],
+Sailboat:["...bw...","...bww..","...bwww.","...bwwww","...b....","tbbbbbbt",".tbbbbt.","..BBBB.."],
+Galleon:[".w..w..r",".ww.ww.r","www.www.","www.www.","..b..b..","dbbbbbbd","dbybybbd",".dddddd."],
+"Molten Metal":["........","..o..o..",".oyoo.o.","oyyyoyoo","sooooyos","ssoooos.",".ssssss.","........"],
+Cannon:["........","........","SSSSSS..","SkSSSSS.","SSSSSSSs","..bb.bb.",".bddbdd.","..bb.bb."],
+Warship:["k..k..k.","w..w..w.","ww.ww.ww","www.ww.w","..b..b..","dbbbbbbd","dkbkbkbd",".dddddd."],
+"Pirate Flag":["bkkkkkk.","bkkwkkk.","bkwwwkk.","bkkwkkk.","bkwkwkk.","bkkkkkk.","b.......","b......."],
+"Pirate Fleet":["k.k...k.","kwkk.kk.","..b..kwk","dbbd..b.","dbbbdbbd",".dddbbbd","BBBB.ddd","BBBBBBBB"],
+Sprout:["........","..g.g...","...gg...","...g....","...g....","..bbbb..",".bdbbdb.","..bbbb.."],
+Garden:["g.g.g.g.",".g.g.g.g","g.g.g.g.","bbbbbbbb","dbdbdbdb","g.g.g.g.",".g.g.g.g","bbbbbbbb"],
+Harvest:[".gg.....","gyyg.og.",".yy..oo.","..t.ro..","tttttttt","tbtbtbtt",".tttttt.","..tttt.."],
+Farm:["...rr...","..rrrr..",".rrwwrr.",".rrwwrr.",".rrrrrr.","gygygygy","gygygygy","bbbbbbbb"],
+Village:[".r....r.","rrr..rrr","wdw..wdw","...r....","..rrr...","..wdw.g.","gg...ggg","cccccccc"],
+Lantern:["...S....","..SSS...",".SpppS..",".SpwpS..",".SpppS..",".SpppS..","..SSS...","........"],
+"Night Light":["...ss...","...gg...","..pppp..",".ppwppp.",".pppppp.",".pppppp.",".pppppp.","..pppp.."],
+Sushi:["........","..wwww..",".wGGGGw.","wwGooGww","wwGooGww",".wGGGGw.","..wwww..","........"],
+"Mermaid Charm":["t......t",".t....t.","..t..t..","...tt...","..llll..",".lgBgBl.","..lgBl..","...ll..."],
+"Sea Crown":["........","l..y..l.","ll.y.ll.","lylylyl.","yyyyyyy.","ywyByPy.","yyyyyyy.","........"],
+"Poseidon's Throne":["y.y.y...","yyyyy...","..y.llll","..ylBBl.","llllBBl.","lBBBBBl.","lBBBBBl.","llllllll"],
+"Ocean Temple":["y..y..y.","yyyyyyy.","...lll..","llllllll",".B.B.B.B",".B.B.B.B",".B.B.B.B","llllllll"],
+Tsunami:["....www.","..wwlBBw",".wlBBBB.","wlBBB...","lBBBB...","BBBBBl..","BBBBBBBl","BBBBBBBB"],
+Mooring:["...SS...","..S..S..","...SS...","t..SS..t",".t.SS.t.","..tSSt..","SS.SS.SS",".SSSSSS."],
+Dock:["........","tttttttt","bbbbbbbb","tttttttt","b..b..b.","bBBbBBbB","BBBBBBBB","BBBBBBBB"],
+"Tin Phone":["ss....ss","rs....sr","rst..tsr","rs.tt.sr","ss....ss","........","........","........"],
+Anvil:["........","SSSSSSS.","SSSSSSSS",".SSSSSS.","..SSSS..","..SSSS..",".SSSSSS.","SSSSSSSS"],
+Tools:["s.....S.","ss...SS.",".sb.SS..","..bbS...","..SbS...",".S..b...","S....b..",".....b.."],
+Workshop:["..SSSS..",".SSSSSS.","SSSSSSSS",".tttttt.",".tSbtdt.",".ttttdt.",".ttttdt.","bbbbbbbb"],
+Shipyard:["S.......","SSS.....","S.t.....","S.t..w..","S.t.bww.","S.tdbbbd","S..dbbd.","BBBBBBBB"],
+Clay:["........","..oooo..",".oottoo.","oottttoo","ootttooo",".oooooo.","........","........"],
+Pottery:["..oooo..","...oo...","..oooo..",".oooooo.",".odddddo",".oooooo.","..oooo..","........"],
+Vase:["..llll..","...ll...","..llll..",".lBlBll.",".llllll.",".lBlBll.","..llll..","........"],
+Flower:["..p.p...",".ppypp..","..p.p...","...g....","..gg....","...g.g..","...gg...","...g...."],
+Bouquet:["p.r.p.y.","rypyrpyp",".g.g.g..","..ggg...","..www...","..wpw...","..www...","...w...."],
+Nectar:["...ss...","...yy...","..yyyy..",".yywyyy.",".yooooy.",".yooooy.",".yooooy.","..yyyy.."],
+Coral:["p..p..p.","p.pp.pp.","pp.pp.p.",".ppppp..","..ppp...","...p....","..sss...","........"],
+Reef:["p.r..p.g","pprr.ppg",".prrpp..","llllllll","lBlpBlBl","BBpBBgBB","BBBBBBBB","BBBBBBBB"],
+"Grand Aquarium":["llllllll","lp.o..gl","lpooo.gl","l..o.p.l","lg.o..pl","lgpp.ppl","lccccccl","llllllll"],
+Salt:["........","...w....","..www...",".wwwww..","wwwlwww.","wwwwwwww","........","........"],
+"Smoked Fish":["........","..dddd.d",".dbdbdbd","dkddddd.","ddddddd.","..dddd.d","ssssssss","........"],
+"Fish Barrel":[".dddddd.","dbbbbbbd","SSSSSSSS","dbBkbbbd","dbbbbbbd","SSSSSSSS","dbbbbbbd",".dddddd."],
+Market:["rwrwrwrw","rwrwrwrw","........",".b....b.",".boooyb.",".bBgrob.","tttttttt","b......b"],
+Town:["..r..r..",".rrr.rrr","r.w..w.w","wdw..wdw",".r.rr...","rrrrrr..","wdwwdw..","ssssssss"],
+Kite:["...r....","..rrr...",".ryryr..","rrrrrrr.",".ryryr..","..rrr...","...t....","....t.t."],
+"Hot Air Balloon":["..rrrr..",".ryyyyr.","rryrryrr","rryrryrr",".ryyyyr.","..t..t..","..t..t..","..bbbb.."],
+"Sky Expedition":["l.rrrr.l",".ryyyyr.","rryrryrr",".ryyyyr.","..t..t..","..bbbb..","l......l",".l.yy.l."],
+Telescope:[".......s","......ss",".....sSs","....sSs.","...sSs..","...bb...","..b..b..",".b....b."],
+Observatory:["...SS...","..SllS..",".SSSSSS.","SSSSSSSS",".wwwwww.",".wwdwww.",".wwdwww.","ssssssss"],
+"Star Chart":["kkkkkkkk","kykkkwkk","kkkwkkky","kwkkykkk","kkkykkwk","kykkkwkk","kkwkkkky","kkkkkkkk"],
+Smoothie:["....g...","..wwgw..",".wppppw.",".wpoopw.",".wppppw.",".wppppw.","..wwww..","........"],
+Mirror:[".yyyyyy.","yllllwly","ylllwlly","yllwllly","ylwlllly","ylllllly",".yyyyyy.","...yy..."],
+"Signal Mirror":["y......y",".y....y.","..yyyy..",".ylllwy.",".yllwly.",".ylwlly.","..yyyy..","...yy..."],
+"Rescue Ship":["...r....","...rr...","..w.ww..",".ww.www.","...b....","rbbbbbbr",".rwwwwr.","..BBBB.."],
+Shield:[".SSSSSS.","SbbbbbbS","SbbybbbS","SbyyybbS","SbbybbbS",".SbbbbS.","..SbbS..","...SS..."],
+Sword:[".......s","......ss",".....ss.","....ss..",".y.ss...","..yy....",".bby....","bb..y..."],
+Pirate:["..kkkk..",".kkwkkk.","kkkkkkkk","..ffff..","..fkff..","..ffff..",".rwrwrw.",".rwrwrw."],
+"Pirate Captain":["kkkkkkkk",".kkykkk.","..ffff..","..fkff..","..ffbb..",".rrrrrr.","yrrrrrry",".rrrrrr."],
+Fountain:["...l....","..lBl...",".l.B.l..","l..B..l.","ssssssss","sBBBBBBs","sBBBBBBs","ssssssss"],
+Statue:["...ss...","..ssss..","...ss...","..ssss..",".s.ss.s.","...ss...","..s..s..","SSSSSSSS"],
+"Golden Statue":["...yy...","..yyyy..","...yy...","..yyyy..",".y.yy.y.","...yy...","..y..y..","SSSSSSSS"],
+"Royal Garden":["g.p.g.y.","gpgygpgg","..l.....",".lBl....","ssssss..","gg.g.ggg","gpgyggpg","bbbbbbbb"],
+Palace:["y..y..y.","y.ryr.y.","wwwwwwww","wywywywy","wwwwwwww","wwwddwww","wwwddwww","yyyyyyyy"],
+Atlantis:["...yy...","..ywwy..","l.wwww.l","lwwyywwl","wwwwwwww","BlBlBlBl","BBBBBBBB","lBlBlBlB"],
+Treehouse:["gGgggGg.","GgtttgG.","gGtdtGg.","..tttt..","...b....","...b....","...bb...","........"],
+"Jungle Lodge":["gGgggGgg","GgttttgG","gtttttgg","Gtdtttdg","..b..b..","b.tttt.b","b.tttt.b","b......b"],
+"Diving Helmet":["..SSSS..",".SyyyyS.","SyllllyS","SylwllyS","SyllllyS",".SyyyyS.","..SSSS..",".SSSSSS."],
+"Pearl Diver":["..SSSS..",".SllllS.",".SlwllS.","..SSSS..",".BBBBBB.",".BBBBBB.","..B..B..","w.B..B.w"],
+"Crab Pot":["t.t.t.t.",".trrrt.t","t.rkrrt.",".trrrt.t","t.t.t.t.","bbbbbbbb","........","........"],
+Luau:["r.....r.","o..o..o.","y.ooo.y.","b.oyo.b.","b..o..b.","b.www.b.","b.www.b.","cccccccc"],
+"Plastic":["........", "..llll..", ".lwllll.", "lllwlll.", "llllwll.", ".llllll.", "..l..l..", "........"],
+"Banana Peel":["....d...","...yy...","..yyyy..",".yyyyyy.","yy.yy.yy","y..yy..y","y..yy..y","........"],
+"Worm":["........", "........", "......pk", ".pp...pp", "p..p.p..", "....p...", "........", "........"],
+"Old Boot":["..dd....", "..bd....", "..bd....", "..bd....", "..bbbb..", "..bbbbbb", "..dddddd", "........"],
+"Sock":["..wwww..", "..rrrr..", "..wwww..", "..wwww..", "..wwww..", "..wwwww.", "..wwwwww", "...wwww."],
+"Egg":["........", "...ww...", "..wwww..", ".wwwwww.", ".wwwwws.", ".wwwwss.", "..wsss..", "........"],
+"Seagull":["........", "ww....ww", ".ww..ww.", "..wwww..", "..wwkwo.", "...ww...", "...s....", "........"],
+"Battery":["...SS...", "..kkkk..", "..yyyy..", "..ykyy..", "..kkkk..", "..kkkk..", "..kkkk..", "..kkkk.."],
+"Hourglass":["dddddddd", ".yyyyyy.", "..yyyy..", "...yy...", "...yy...", "..y..y..", ".yyyyyy.", "dddddddd"],
+"Lucky Clock":["..yyyy..", ".ywwwwy.", "ywwkwwwy", "ywwkwwwy", "ywwkkkwy", "ywwwwwwy", ".ywwwwy.", "..yyyy.."],
+"Thread":["........", "..dddd..", "..rrrr..", "..rwrr..", "..rrrr..", "..rrwr..", "..dddd..", "........"],
+"Needle":[".......s", "......s.", ".....s..", "....s...", "...s....", "..s.....", ".k......", "........"],
+"Sewing Kit":["........", "..pppp..", ".pppppp.", "pppppppp", "prrpppbp", "pprpppsp", "pppppppp", "........"],
+"T-Shirt":["........", ".rr..rr.", "rrrrrrrr", "rrrrrrrr", ".rrrrrr.", ".rrrrrr.", ".rrrrrr.", ".rrrrrr."],
+"Shorts":["........", "........", "BBBBBBBB", "BBBBBBBB", "BBBBBBBB", "BBB..BBB", "BBB..BBB", "........"],
+"Sun Hat":["........", "........", "...tt...", "..tttt..", "..rrrr..", "tttttttt", ".tttttt.", "........"],
+"Socks":["ww..ww..", "rr..rr..", "ww..ww..", "ww..ww..", "ww..ww..", "www.www.", "wwwwwwww", ".ww..ww."],
+"Sneaker":["........", "........", "..ww....", "..wBw...", "..wwwww.", ".wwwBwww", "ssssssss", "........"],
+"Hype Sneakers":["y......y", "..ww....", "..wrw...", "..wwwww.", ".wwwrwww", "yyyyyyyy", ".y.y.y.y", "........"],
+"Hoodie":["...SS...", "..SkkS..", ".SSSSSS.", "SSSSSSSS", "SSSwwSSS", "SSSSSSSS", ".SSSSSS.", ".SSSSSS."],
+"Designer Tee":["........", ".kk..kk.", "kkkkkkkk", "kkyyyykk", ".kykkyk.", ".kyyyyk.", ".kkkkkk.", ".kkkkkk."],
+"Streetwear Drop":["y......y", ".rrrrrr.", "rrwwwwrr", "rrwrrwrr", ".rwwwwr.", ".rrrrrr.", "y......y", "........"],
+"Fashion Week":["y.....y.", "..kkk...", "..kfk...", "..rrr...", ".rrrrr..", "..r.r...", "yyyyyyyy", "PPPPPPPP"],
+"Sunglasses":["........", "........", "kkkkkkkk", "kllkkllk", "kkk..kkk", ".kk..kk.", "........", "........"],
+"Beach Outfit":["..tttt..", "tttttttt", "........", ".kk..kk.", "........", ".BBBBBB.", ".BB..BB.", "........"],
+"Raincoat":["...yy...", "..yyyy..", ".yyyyyy.", "yyyyyyyy", ".yykyyy.", ".yyyyyy.", ".yyyyyy.", ".yy..yy."],
+"Fruit Tree":[".gGgGg..", "gGrgGrg.", "gGgGgGg.", ".grgGg..", "...b....", "...b....", "..bbb...", "........"],
+"Banana":["......d.", ".....yy.", "....yy..", "...yy...", "..yyy...", ".yyy....", "yy......", "........"],
+"Fruit Salad":["........", ".ry.gr..", "yrgyrgy.", "wwwwwwww", ".wwwwww.", "..wwww..", "........", "........"],
+"Compost":["........", "...g....", "..dbgd..", ".dbdybd.", "dbdbdbbd", "bdbdbdbd", "dddddddd", "........"],
+"Worm Farm":["SSSSSSSS", "Sdbdpdbs", "Sbpbdbds", "Sdbdbpbs", "Sbdpdbds", "Sdbdbdbs", "SSSSSSSS", "........"],
+"Potato":["........", "..tttt..", ".tdtttt.", "tttttdtt", "ttdttttt", ".tttttt.", "..tttt..", "........"],
+"Frying Oil":["...gg...", "...yy...", "..yyyy..", "..yoyy..", "..yyyy..", "..yyyy..", "..yyyy..", "..yyyy.."],
+"Fries":["y.y..y..", "y.yy.y.y", "yyyyyyyy", "rrrrrrrr", "rrwrrwrr", "rrrrrrrr", ".rrrrrr.", "........"],
+"Golden Fries":["y.y.y.y.", "yoyyoyyo", "yyyyyyyy", "rryyyyrr", "ryyrryyr", "rrrrrrrr", ".rrrrrr.", "y......y"],
+"Bread":["........", "..tttt..", ".tottot.", "tttttttt", "totottot", "tttttttt", "........", "........"],
+"Fish Burger":["..tttt..", ".tttttt.", "gggggggg", "oooooooo", "yyyyyyyy", ".tttttt.", "........", "........"],
+"Fast Food Meal":["r.y.y...", "ryyyy.tt", "rrrr.ttt", "rwrr.ggg", "rrrr.ooo", "rrrr.ttt", "yyyyyyyy", "........"],
+"Omelette":["........", "..wwww..", ".wyyyyw.", "wyyoyyyw", "wyyyyyyw", ".wwwwww.", "ssssssss", "........"],
+"Bird Feed":["........", "..tttt..", ".t....t.", ".tdtdtt.", ".tttdtt.", ".tdtttt.", "..tttt..", "........"],
+"Chick":["........", "...yy...", "..ykyy..", "..yyyo..", ".yyyyy..", ".yyyyy..", "..o.o...", "........"],
+"Chicken":["..r.....", "..ww....", ".wkwo...", ".www....", ".wwwwww.", "..wwwww.", "...o.o..", "...o.o.."],
+"Chicken Coop":["...rr...", "..rrrr..", ".rrrrrr.", ".tttttt.", ".tkkttt.", ".tkkt.w.", ".ttttwkw", "bbbbbbbb"],
+"Roast Chicken":["........", "..oooo..", ".oddooo.", "oooooooo", "oooodooo", "ssssssss", ".ssssss.", "........"],
+"Chicken Nuggets":["........", "..oo.oo.", ".oyo.oyo", ".oo..oo.", "oo.oo...", "oyooyo..", "ssssssss", "........"],
+"Nest":["........", "........", "..wwww..", "..wsws..", "dbwwwwbd", "bdbdbdbd", ".dbdbdb.", "........"],
+"Happy Gull":["........", "ww....ww", ".ww..ww.", "..wwww..", "..wwkwo.", "...wwBo.", "...s.B..", "........"],
+"Bait":["...s....", "...s....", "..s.s...", "...s....", "..pps...", ".p..p...", "p...p...", "........"],
+"Big Catch":["........", "..BBBBB.", ".BBBBBBB", "BkBlBBB.", "BBBBBBBB", ".BBBBBBB", "..BBBBB.", "........"],
+"Ranch":["...rr...", "..rrrr..", "rrwwrr..", "rrwwrr.w", ".......w", "t.t.t.t.", "tttttttt", "gggggggg"],
+"Molten Plastic":["........", "...l....", "..lPl...", ".lPPPl..", "lPPPPPl.", "lllllll.", "........", "........"],
+"Plastic Sheet":["........", "........", "llllllll", "lwllllwl", "llllwlll", "llllllll", "........", "........"],
+"Bucket":["........", ".r....r.", ".rrrrrr.", ".pppppp.", ".pppppp.", "..pppp..", "..pppp..", "........"],
+"Kayak":["........", "........", ".....k..", "....kk..", "yyyyyyyy", ".yyyyyy.", "..BBBB..", "BBBBBBBB"],
+"Toy Duck":["........", "..yy....", ".ykyo...", ".yyy....", "yyyyyyy.", "yyyyyyy.", ".yyyyy..", "........"],
+"Beach Toys":["...r....", "..rrr...", "....b...", "..pp.b..", ".pppp...", "..pp....", "cccccccc", "........"],
+"Recycling Plant":["g.....g.", "gg...gg.", "SSSSSSSS", "SlSSlSSS", "SSSSSSSS", "SgggSdSS", "SSSSSdSS", "SSSSSSSS"],
+"Flashlight":["yy......", "yyy.....", "yySSSSSS", "yySSSSSS", "yyy.....", "yy......", "........", "........"],
+"Radio":["......k.", ".....k..", "SSSSSSSS", "SkkkSyyS", "SkkkSyyS", "SkkkSSSS", "SSSSSSSS", "........"],
+"Solar Panel":["BBBBBBBB", "BlBBlBBB", "BBBBBBBB", "BBlBBBlB", "BBBBBBBB", "...ss...", "...ss...", "..ssss.."],
+"Robot":["...r....", "..ssss..", ".slssls.", "..ssss..", "ssssssss", "s.syys.s", "..s..s..", ".ss..ss."],
+"Electric Boat":["....y...", "...y....", "..yyy...", "....y...", "...y....", "SSSSSSSS", ".SSSSSS.", "BBBBBBBB"],
+"Island Disco":["P.y.B.r.", ".PyBr...", "..www...", ".wkwkw..", "..www...", "r..y..P.", "........", "cccccccc"],
+"Ball":["..kkkk..", ".kwwwwk.", "kwwkkwwk", "kwkkkkwk", "kwkkkkwk", "kwwkkwwk", ".kwwwwk.", "..kkkk.."],
+"Soap":["........", "..l..l..", ".l.ll...", "........", ".pppppp.", "ppwppppp", "pppppppp", ".pppppp."],
+"Dice":[".wwwwww.", "wkwwwwkw", "wwwwwwww", "wwwkwwww", "wwwwwwww", "wkwwwwkw", "wwwwwwww", ".wwwwww."],
+"Toothbrush":["......ww", "......BB", ".....B..", "....B...", "...B....", "..B.....", ".B......", "B......."],
+"Whistle":["........", "........", "..ssss..", ".ssssssk", ".sskssss", "..ssss..", "...r....", "..r....."],
+"Goal":["wwwwwwww", "wl.l.l.w", "w.l.l.lw", "wl.l.l.w", "w.l.l.lw", "wl.l.l.w", "w......w", "gggggggg"],
+"Football Pitch":["gGgGgGgG", "wwwwwwww", "wGgwwgGw", "wgGwwGgw", "wGgwwgGw", "wwwwwwww", "gGgGgGgG", "GgGgGgGg"],
+"Football Boots":["........", "........", "kk......", "kkk.....", "kkkkkk..", "kkkwkkkk", "y.y.y.y.", "........"],
+"Jersey":["........", ".ll..ll.", "llwlwlwl", "lwlwlwll", ".lwwwwl.", ".lwwkwl.", ".lwkkwl.", ".llllll."],
+"Football Team":[".f..f..f", "lwl.lwl.", "lll.lll.", "lwl.lwl.", ".l..l..l", "........", "kk.kk.kk", "........"],
+"Match":["gggggggg", "gwg.lgwg", "gggwgggg", "gwkkwggg", "gggwgggg", "grg.lgrg", "gggggggg", "........"],
+"Medal":["r......r", ".r....r.", "..r..r..", "...rr...", "..yyyy..", ".yyoyyy.", ".yyyyyy.", "..yyyy.."],
+"Trophy":["yyyyyyyy", "yyoyyyoy", ".yyyyyy.", "..yyyy..", "...yy...", "...yy...", "..dddd..", ".dddddd."],
+"Champions":["y..y..y.", "yyyyyyy.", "........", "yyyyyyyy", ".yyyyyy.", "..yyyy..", "...yy...", ".PPPPPP."],
+"The GOAT":["y.y.y...", "yyyyy...", "w.ww.w..", "wwkwwww.", "wwwwwwww", ".wwwws..", "lwlwlw..", "lwlwlw.."],
+"Racket":["..ssss..", ".slwlws.", ".swlwls.", ".slwlws.", "..ssss..", "...bb...", "...bb...", "...dd..."],
+"Surfboard":["...rr...", "..rwwr..", "..rwwr..", "..rrrr..", "..rwwr..", "..rwwr..", "..rrrr..", "...rr..."],
+"Big Wave Rider":["....www.", "..wwlBBw", ".wl.r.B.", "wlB.r...", "lBBrrr..", "BBBBBl..", "BBBBBBBl", "BBBBBBBB"],
+"Dumbbell":["........", "SS....SS", "SS....SS", "SSssssSS", "SSssssSS", "SS....SS", "SS....SS", "........"],
+"Gym":["...rr...", "..rrrr..", ".rrrrrr.", "rrrrrrrr", ".wwwwww.", ".wSssSw.", ".wwwwww.", ".wwwwww."],
+"Protein Shake":["...ss...", "..wwww..", "..pppp..", "..pwpp..", "..pppp..", "..pppp..", "..pppp..", "..ssss.."],
+"Buoy":["...k....", "...k....", "..rrrr..", "..wwww..", ".rrrrrr.", ".wwwwww.", "rrrrrrrr", "BBBBBBBB"],
+"Life Ring":["..rwwr..", ".r....r.", "w......w", "w......w", "r......r", "r......r", ".w....w.", "..wrrw.."],
+"Lifeguard Tower":["..rrrr..", ".rrrrrr.", "..tttt..", "..t..t..", ".t....t.", ".t....t.", "t......t", "cccccccc"],
+"Lifeguard":["...dd...", "..dffd..", "..ffff..", ".rrrrrr.", "f.rwwr.f", "..rrrr..", "..f..f..", "..f..f.."],
+"Marina":["r.....r.", "bw...bw.", "bww..bww", "bbbbbbbb", "tttttttt", "bBBbBBbB", "BBBBBBBB", "BrBBBrBB"],
+"Paper":[".wwwww..", ".wwwwww.", ".wsssww.", ".wwwwww.", ".wsssww.", ".wwwwww.", ".wsssww.", ".wwwwww."],
+"Cards":["..wwwww.", ".wwwwwrw", "wwwwwwrw", "wrwwwwww", "wrrwwwww", "wrwwwwww", "wwwwwww.", ".wwwww.."],
+"Board Game":["........", "rwrwrwrw", "wrwrwrwr", "rwrwrwrw", "wrwrwrwr", "rwrwrwrw", "dddddddd", "........"],
+"Casino":["y.y.y.y.", "rrrrrrrr", "rwrrrwrr", "ryyyyyrr", "rrrrrrrr", "rgggggrr", "rgwgwgrr", "rrrrrrrr"],
+"Game Night":["kkkkkkkk", "kyk.kyk.", "kkkkkkkk", "rwrwwwrw", "wrwwkwrw", "rwrwwwrw", "dddddddd", "........"],
+"Lucky Roll":["wwww....", "wkww....", "wwkw....", "wwww.www", "....wkww", "....wwkw", "....wwww", "y.y....y"],
+"Chess":["...k....", "..kkk...", "...k....", "..kkk...", "..kkk...", ".kkkkk..", "wkwkwkwk", "kwkwkwkw"],
+"Arcade":[".PPPPPP.", ".PkkkkP.", ".PkBykP.", ".PkkkkP.", ".PPPPPP.", ".PrPyPP.", ".PPPPPP.", ".P....P."],
+"Video Game":["........", "........", ".SSSSSS.", "SSkSSrSS", "SkkkSSSy", "SSkSSSSS", ".SS..SS.", "........"],
+"Toothpaste":["........", "........", "SwwwwwwB", "SwrrwwwB", "SwwwwwwB", "........", "........", "........"],
+"Sparkling Smile":["y......y", "........", ".rrrrrr.", "rwwwwwwr", "rwwwwwwr", ".rrrrrr.", "........", "y......y"],
+"Bubbles":["..ll....", ".l..l.l.", ".l..ll.l", "..ll..l.", ".....ll.", "..ll....", ".l..l...", "..ll...."],
+"Bathtub":["s.......", "s.......", "ssss....", "wwwwwwww", "wllllllw", "wwwwwwww", ".s....s.", "........"],
+"Bubble Bath":[".ll.l.l.", "l.lw.l.l", "sllllll.", "wwwwwwww", "wllllllw", "wwwwwwww", ".s....s.", "........"],
+"Spa Day":[".l.l.yy.", "l.l.ykyo", "wwwwwwww", "wlllyyyw", "wllllllw", "wwwwwwww", ".s....s.", "........"],
+"Towel":["........", "bbbbbbbb", "bwwwwwwb", "brrrrrrb", "bwwwwwwb", "brrrrrrb", "bwwwwwwb", "........"],
+"Beach Day":["y.....y.", "..r.....", ".rrr....", "..b.....", "..b.....", "rwrwrw..", "cccccccc", "BBBBBBBB"],
+"Bathroom":["...rr...", "..rrrr..", ".rrrrrr.", "rrrrrrrr", ".wwwwww.", ".wllllw.", ".wwwwww.", ".ww..ww."],
+"Toilet":["wwww....", "wwww....", "wwww....", "wwwwwww.", ".wwwwww.", "..wwww..", "..wwww..", ".wwwwww."],
+"Toilet Paper":["........", ".wwwww..", "wwwwwww.", "wwwswww.", "wwwwwwww", "wwwwwww.", "........", "........"],
+"Electric Toothbrush":["...ww...", "...ss...", "...ss...", "..SSSS..", "..SyyS..", "..SSSS..", "..SSSS..", "..SSSS.."],
+"Squeaky Pirate":["..kkkk..", ".kkwkkk.", "kkkkkkkk", "l.ffff.l", ".lfkffl.", "..ffff..", ".rwrwrw.", "l.l..l.l"],
+"Jackpot":["y.y..y.y", ".yyyyyy.", "dyrryyyd", "dyyrryyd", "dyyryyyd", "dbbkkbbd", "dbbbbbbd", "dddddddd"],
+"Beach Volleyball":["..kkkk..", ".kwywwk.", ".kwywwk.", "..kkkk..", "t.......", "tttttttt", "t.....t.", "cccccccc"],
+"Goalkeeper Crab":["wwwwwwww", "w......w", "w.r..r.w", "w.rrrr.w", "wrkrrkrw", "w.rrrr.w", "wr.rr.rw", "gggggggg"],
+"Stadium":["y..y..y.", "SSSSSSSS", "SrSrSrSS", "gggggggg", "gwgggwgg", "gggggggg", "SSSSSSSS", "........"],
+"Foam Party":["P.y.B.r.", "lwlwlwll", "wlwlwlwl", "..www...", ".wkwkw..", "lwlwlwlw", "wlwlwlwl", "cccccccc"],
+"Fishing Champion":["yyyyyyyy", "yyoyyyoy", ".yyyyyy.", "..yBBy..", "...yy...", "...yy...", "..dddd..", ".dddddd."],
+"Tea Leaves":["......g.", ".....gG.", "....gGg.", "...gGg..", "..gGg...", ".gGg....", "gGg.....", "d......."],
+"Cocoa Bean":["........", "..dddd..", ".dbbbbd.", "dbdbbdbd", "dbbddbbd", ".dbbbbd.", "..dddd..", "........"],
+"Hay":["y.y.y.y.", "yyyyyyyy", "ytytytyt", "yyyyyyyy", "tytytyty", "yyyyyyyy", "dddddddd", "........"],
+"Cow":["d......d", ".dwwwwd.", "wwkwwkww", "wwwwwwww", "wkwwwwkw", ".pppppp.", ".pkppkp.", "..pppp.."],
+"Milk":["...ww...", "..wwww..", "..lBBl..", ".wwwwww.", ".wwwwww.", ".wBBBBw.", ".wwwwww.", ".wwwwww."],
+"Cheese":["........", "......yy", "....yyyy", "..yyoyyy", "yyyyyyoy", "yoyyyyyy", "yyyyoyyy", "yyyyyyyy"],
+"Fondue":["..y.y...", "...y.y..", "yyyyyyyy", ".yoyyyy.", "..rrrr..", "..rwwr..", "...ss...", "..ssss.."],
+"Milkshake":["..r.....", "..wwww..", "..wwww..", ".pppppp.", ".pwpppp.", "..pppp..", "..pppp..", "..ssss.."],
+"Butter":["........", "........", "...yyyy.", "..yyyyyy", ".yywyyy.", "yyyyyy..", "ssssssss", "........"],
+"Croissant":["........", "..oooo..", ".oyoyoo.", "oyooyooy", "oo....oo", "o......o", "........", "........"],
+"Steak":["........", "..rrrr..", ".rrwrrr.", "rrrrwrrr", "rrrrrrrw", ".rrrrrr.", "..rrrr..", "........"],
+"Grill":["........", "SSSSSSSS", "S.S.S.SS", "SSSSSSSS", ".SrorS..", ".S.S..S.", "S...S..S", "........"],
+"BBQ Party":[".s.s.s..", "s.s.s...", "rrdrrdrr", "SSSSSSSS", ".SoroS..", ".S....S.", "S......S", "gggggggg"],
+"Burger":["..tttt..", ".tttttt.", "gggggggg", "dddddddd", "yyyyyyyy", "rrrrrrrr", ".tttttt.", "........"],
+"Sausage":["........", ".rr.....", "rrrr....", ".rrrr...", "..rrrr..", "...rrrr.", "....rrr.", "........"],
+"Hot Dog":["........", "........", "tttttttt", "rrrrrrrr", "yryryryr", "tttttttt", "........", "........"],
+"Tea":["........", "...s.s..", "..s.s...", "wwwwww..", "wddddwww", "wddddw.w", "wwwwwwww", ".wwwww.."],
+"Teapot":["...ww...", "..wwww..", ".wwwwww.", "wwBwBwww", "wwwBwwww", ".wwwwww.", "..wwww..", "........"],
+"Tea Party":["...ww...", "..wwww..", ".wwBwww.", "..wwww..", "wd.ww.dw", "ww....ww", "pppppppp", ".p....p."],
+"Milk Tea":["........", "..wwww..", ".wttttw.", ".wttttww", ".wttttw.", ".wttttw.", "..wwww..", "........"],
+"Bubble Tea":["....k...", "..wwkw..", "..wtkt..", "..wttt..", "..wttt..", "..wkkt..", "..wkkk..", "..wwww.."],
+"Matcha":["........", "........", "wwwwwwww", "wggggggw", "wgGggGgw", ".wggggw.", "..wwww..", "........"],
+"Pizza":["tttttttt", ".yryyry.", ".yyyyyy.", "..ryyr..", "..yyyy..", "...yy...", "...yy...", "........"],
+"Chocolate":["........", "dddddddd", "dbdbdbdd", "dddddddd", "dbdbdbdd", "dddddddd", "wwwwwwww", "rrrrrrrr"],
+"Hot Chocolate":["..s.s...", "...s.s..", "........", "wwwwww..", "wddddwww", "wddddw.w", "wwwwwwww", ".wwwww.."],
+"Fish & Chips":["y.y..oo.", "y.yyoooo", "yyy.oooo", "rrr..oo.", "rrrw....", "rrrr....", "wwwwwwww", ".wwwwww."],
+"Switzerland":["rrrrrrrr", "rrrwwrrr", "rrrwwrrr", "rwwwwwwr", "rwwwwwwr", "rrrwwrrr", "rrrwwrrr", "rrrrrrrr"],
+"Italy":["gggwwrrr", "gggwwrrr", "gggwwrrr", "gggwwrrr", "gggwwrrr", "gggwwrrr", "gggwwrrr", "........"],
+"France":["BBBwwrrr", "BBBwwrrr", "BBBwwrrr", "BBBwwrrr", "BBBwwrrr", "BBBwwrrr", "BBBwwrrr", "........"],
+"UK":["BwBrrBwB", "wBBrrBBw", "BBBrrBBB", "rrrrrrrr", "rrrrrrrr", "BBBrrBBB", "wBBrrBBw", "BwBrrBwB"],
+"Japan":["wwwwwwww", "wwwwwwww", "wwwrrwww", "wwrrrrww", "wwrrrrww", "wwwrrwww", "wwwwwwww", "wwwwwwww"],
+"USA":["BBBwrrrr", "BwBwwwww", "BBBwrrrr", "wwwwwwww", "rrrrrrrr", "wwwwwwww", "rrrrrrrr", "........"],
+"Brazil":["gggggggg", "gggyyggg", "ggyyyygg", "gyyBByyg", "gyyBByyg", "ggyyyygg", "gggyyggg", "gggggggg"],
+"Argentina":["llllllll", "llllllll", "wwwwwwww", "wwwyywww", "wwwyywww", "wwwwwwww", "llllllll", "llllllll"],
+"World Cup":["..yyyy..", ".yBgBy..", "..yyyy..", "...yy...", "..yyyy..", "...yy...", "..gggg..", ".gggggg."]
+};
+const IMG={};
+for(const n in SP){const c=document.createElement('canvas');c.width=c.height=8;const g=c.getContext('2d');
+  SP[n].forEach((row,y)=>[...row].forEach((ch,x)=>{if(PAL[ch]){g.fillStyle=PAL[ch];g.fillRect(x,y,1,1)}}));IMG[n]=c;}
+const _URL={};const img=n=>`<img src="${_URL[n]||(_URL[n]=IMG[n].toDataURL())}">`;
+
+// ---------- loot + recipes ----------
+const R={c:'COMMON',u:'UNCOMMON',r:'RARE',e:'EPIC',l:'LEGENDARY',t:'TIME BONUS +30s'};
+const LOOT=[['Seaweed','c',30],['Stone','c',28],['Shell','c',26],['Fish','c',24],['Feather','c',20],['Tin Can','c',20],
+['Rope','u',14],['Bottle','u',13],['Coconut','u',13],['Crab','u',12],['Starfish','u',11],['Cloth','u',11],['Seeds','u',11],['Squid','u',10],['Jellyfish','u',10],['Sea Urchin','u',9],
+['Anchor','r',5],['Pearl','r',5],['Compass','r',5],['Old Map','e',2.2],['Mermaid Scale','e',2],['Golden Idol','l',.7],['Trident','l',.6]];
+LOOT.push(['Plastic','c',26],['Banana Peel','c',22],['Worm','c',22],['Old Boot','c',20],['Sock','c',20],['Egg','u',12],['Seagull','u',10],['Battery','e',2.2],['Hourglass','t',2.5],['Lucky Clock','t',2.5]);
+LOOT.push(['Ball','c',22],['Soap','c',18],['Dice','u',11],['Toothbrush','u',11],['Whistle','r',5]);
+LOOT.push(['Tea Leaves','u',11],['Cocoa Bean','r',5]);
+const TIMEBONUS={Hourglass:30,'Lucky Clock':30};
+const BASE=['Sand','Water','Sun','Wood'];
+const REC={};const add=(a,b,r,p)=>REC[[a,b].sort().join('+')]=[r,p];
+[['Sand','Sun','Glass',5],['Wood','Sun','Fire',5],['Sand','Water','Mud',2],['Fire','Water','Steam',4],['Sun','Water','Rainbow',6],
+['Glass','Fire','Bottle',6],['Stone','Wood','Axe',10],['Axe','Wood','Planks',12],['Planks','Mud','Hut',25],['Hut','Fire','Cozy Hut',40],
+['Mud','Stone','Brick',8],['Brick','Planks','House',35],['Fire','Rope','Torch',8],['Stone','Fire','Furnace',15],
+['Wood','Rope','Raft',12],['Shell','Rope','Necklace',15],['Pearl','Necklace','Royal Necklace',60],['Bottle','Water','Fresh Water',8],
+['Coconut','Stone','Coconut Milk',10],['Coconut','Sand','Palm Tree',15],['Palm Tree','Hut','Beach Villa',70],['Palm Tree','House','Beach Villa',70],
+['Glass','Compass','Lens',35],['Lens','Stone','Lighthouse',80],['Lens','Torch','Lighthouse',80],['Old Map','Compass','Treasure Route',50],['Treasure Route','Axe','Treasure Chest',120],
+['Golden Idol','Fire','Sacred Temple',150],['Golden Idol','Torch','Sacred Temple',150],['Raft','Compass','Ship',60],['Ship','Old Map','Trade Empire',200],
+['Shell','Sand','Sandcastle',10],['Starfish','Sandcastle','Royal Sandcastle',30],['Fish','Fire','Grilled Fish',12],['Fish','Glass','Aquarium',30],
+['Crab','Fire','Crab Feast',20],['Seaweed','Fire','Seaweed Chips',8],['Grilled Fish','Coconut Milk','Island Feast',45],['Crab Feast','Coconut Milk','Island Feast',45],
+['Island Feast','Cozy Hut','Tavern',90],['Island Feast','House','Tavern',90],['Seaweed','Rope','Fishing Net',15],['Fishing Net','Raft','Fishing Boat',45],
+['Furnace','Golden Idol','Gold Bars',100],['Gold Bars','Treasure Chest','Pirate Hoard',250],['Pearl','Shell','Oyster',20],['Bottle','Old Map','Message in a Bottle',40],
+['Rainbow','Pearl','Rainbow Pearl',55],['Rope','Planks','Bridge',25],['Bridge','Lighthouse','Harbor',130],['Fishing Boat','Lighthouse','Harbor',130],['Harbor','Ship','Port City',220],
+['Wood','Shell','Wind Chime',10],['Crab','Shell','Hermit Crab',12],['Palm Tree','Rope','Hammock',25],['Hammock','Coconut Milk','Paradise',75],
+['Starfish','Water','Tide Pool',10],['Compass','Sun','Sundial',25],['Fish','Seaweed','Tide Pool',10]].forEach(a=>add(...a));
+[['Squid','Bottle','Ink',12],['Ink','Feather','Quill',20],['Quill','Cloth','Journal',40],['Journal','Compass','Explorer\'s Log',90],['Journal','Old Map','Explorer\'s Log',90],
+['Cloth','Rope','Sail',15],['Sail','Raft','Sailboat',50],['Sailboat','Compass','Ship',60],['Ship','Anchor','Galleon',120],['Galleon','Old Map','Trade Empire',200],
+['Tin Can','Fire','Molten Metal',15],['Molten Metal','Brick','Cannon',40],['Galleon','Cannon','Warship',170],['Cloth','Ink','Pirate Flag',25],['Warship','Pirate Flag','Pirate Fleet',280],
+['Molten Metal','Stone','Anvil',30],['Anvil','Tin Can','Tools',50],['Anvil','Molten Metal','Tools',50],['Tools','Planks','Workshop',70],['Workshop','Sail','Shipyard',120],['Shipyard','Raft','Galleon',120],
+['Seeds','Mud','Sprout',8],['Sprout','Water','Garden',20],['Garden','Sun','Harvest',35],['Harvest','Hut','Farm',70],['Harvest','House','Farm',70],['Farm','Island Feast','Village',150],['Village','Harbor','Port City',250],
+['Jellyfish','Glass','Lantern',30],['Jellyfish','Bottle','Night Light',20],['Lantern','Lens','Lighthouse',80],
+['Fish','Seaweed','Sushi',20],['Sea Urchin','Seaweed','Sushi',20],['Sushi','Grilled Fish','Island Feast',45],['Sea Urchin','Fire','Crab Feast',20],
+['Mermaid Scale','Pearl','Mermaid Charm',80],['Mermaid Scale','Necklace','Mermaid Charm',80],['Mermaid Charm','Royal Necklace','Sea Crown',180],['Trident','Sea Crown','Poseidon\'s Throne',300],['Trident','Sacred Temple','Ocean Temple',280],['Trident','Water','Tsunami',60],
+['Anchor','Rope','Mooring',20],['Mooring','Bridge','Dock',60],['Dock','Lighthouse','Harbor',130],['Dock','Sailboat','Harbor',130],
+['Tin Can','Rope','Tin Phone',15],['Feather','Rope','Wind Chime',10],['Wood','Coconut','Palm Tree',15]].forEach(a=>add(...a));
+[['Mud','Sand','Clay',6],['Clay','Fire','Pottery',15],['Pottery','Glass','Vase',30],['Sprout','Sun','Flower',15],['Flower','Vase','Bouquet',45],['Flower','Bottle','Nectar',20],
+['Starfish','Seaweed','Coral',15],['Coral','Water','Reef',30],['Reef','Aquarium','Grand Aquarium',90],['Steam','Stone','Salt',10],['Grilled Fish','Salt','Smoked Fish',30],['Smoked Fish','Planks','Fish Barrel',50],
+['Fish Barrel','Hut','Market',90],['Market','Village','Town',200],['Cloth','Feather','Kite',20],['Kite','Steam','Hot Air Balloon',60],['Hot Air Balloon','Compass','Sky Expedition',140],
+['Lens','Tin Can','Telescope',50],['Telescope','House','Observatory',110],['Telescope','Journal','Star Chart',100],['Coconut Milk','Harvest','Smoothie',50],['Glass','Molten Metal','Mirror',35],
+['Mirror','Sun','Signal Mirror',45],['Signal Mirror','Sailboat','Rescue Ship',150],['Tin Can','Wood','Shield',15],['Molten Metal','Wood','Sword',30],['Sword','Pirate Flag','Pirate',60],['Pirate','Treasure Chest','Pirate Captain',160],
+['Brick','Fresh Water','Fountain',40],['Stone','Tools','Statue',50],['Statue','Gold Bars','Golden Statue',180],['Garden','Fountain','Royal Garden',80],['House','Gold Bars','Palace',160],['Palace','Sea Crown','Atlantis',350],
+['Palm Tree','Planks','Treehouse',40],['Treehouse','Hammock','Jungle Lodge',85],['Glass','Tin Can','Diving Helmet',30],['Diving Helmet','Fishing Net','Pearl Diver',70],['Crab','Fishing Net','Crab Pot',25],['Torch','Island Feast','Luau',80],
+['Coral','Fish','Reef',30],['Sword','Shield','Pirate',60],['Pearl Diver','Reef','Pearl',20]].forEach(a=>add(...a));
+const NEWREC=[["Cloth", "Cloth", "Thread", 10], ["Feather", "Molten Metal", "Needle", 15], ["Needle", "Thread", "Sewing Kit", 25], ["Cloth", "Sewing Kit", "T-Shirt", 30], ["Cloth", "Needle", "Shorts", 20], ["Cloth", "Sun", "Sun Hat", 15], ["Sock", "Sock", "Socks", 10], ["Old Boot", "Sewing Kit", "Sneaker", 40], ["Old Boot", "Rope", "Sneaker", 40], ["Socks", "Old Boot", "Sneaker", 40], ["Sneaker", "Sneaker", "Hype Sneakers", 120], ["T-Shirt", "Thread", "Hoodie", 45], ["T-Shirt", "Gold Bars", "Designer Tee", 150], ["T-Shirt", "Golden Idol", "Designer Tee", 150], ["T-Shirt", "Pearl", "Designer Tee", 150], ["Hoodie", "Hype Sneakers", "Streetwear Drop", 250], ["Designer Tee", "Streetwear Drop", "Fashion Week", 350], ["Designer Tee", "Hype Sneakers", "Fashion Week", 350], ["Molten Plastic", "Glass", "Sunglasses", 35], ["Shorts", "Sunglasses", "Beach Outfit", 60], ["Shorts", "Sun Hat", "Beach Outfit", 60], ["Plastic Sheet", "Cloth", "Raincoat", 35], ["Plastic Sheet", "T-Shirt", "Raincoat", 35], ["Flower", "Water", "Fruit Tree", 30], ["Palm Tree", "Seeds", "Fruit Tree", 30], ["Fruit Tree", "Banana Peel", "Banana", 25], ["Fruit Tree", "Sun", "Banana", 25], ["Banana", "Coconut", "Fruit Salad", 40], ["Banana", "Coconut Milk", "Smoothie", 50], ["Banana Peel", "Mud", "Compost", 10], ["Banana Peel", "Seaweed", "Compost", 10], ["Compost", "Worm", "Worm Farm", 30], ["Compost", "Sprout", "Potato", 20], ["Compost", "Seeds", "Garden", 20], ["Coconut Milk", "Fire", "Frying Oil", 15], ["Potato", "Frying Oil", "Fries", 45], ["Fries", "Salt", "Golden Fries", 150], ["Harvest", "Fire", "Bread", 25], ["Bread", "Grilled Fish", "Fish Burger", 60], ["Golden Fries", "Chicken Nuggets", "Fast Food Meal", 320], ["Golden Fries", "Fish Burger", "Fast Food Meal", 320], ["Egg", "Fire", "Omelette", 15], ["Seeds", "Worm", "Bird Feed", 15], ["Egg", "Sun", "Chick", 20], ["Chick", "Bird Feed", "Chicken", 45], ["Chicken", "Hut", "Chicken Coop", 70], ["Chicken", "Planks", "Chicken Coop", 70], ["Chicken", "Fire", "Roast Chicken", 50], ["Chicken Coop", "Frying Oil", "Chicken Nuggets", 180], ["Chicken Coop", "Fire", "Chicken Nuggets", 180], ["Seagull", "Wood", "Nest", 15], ["Nest", "Egg", "Chick", 20], ["Seagull", "Fish", "Happy Gull", 25], ["Worm", "Rope", "Bait", 15], ["Bait", "Fishing Boat", "Big Catch", 90], ["Bait", "Sailboat", "Big Catch", 90], ["Farm", "Chicken Coop", "Ranch", 160], ["Plastic", "Fire", "Molten Plastic", 10], ["Molten Plastic", "Stone", "Plastic Sheet", 20], ["Molten Plastic", "Sand", "Bucket", 20], ["Plastic Sheet", "Raft", "Kayak", 50], ["Molten Plastic", "Chick", "Toy Duck", 35], ["Molten Plastic", "Seagull", "Toy Duck", 35], ["Bucket", "Sandcastle", "Beach Toys", 45], ["Bucket", "Shell", "Beach Toys", 45], ["Molten Plastic", "Workshop", "Recycling Plant", 120], ["Battery", "Tin Can", "Flashlight", 40], ["Battery", "Tin Phone", "Radio", 60], ["Battery", "Mirror", "Solar Panel", 70], ["Battery", "Sun", "Solar Panel", 70], ["Battery", "Tools", "Robot", 150], ["Battery", "Kayak", "Electric Boat", 120], ["Radio", "Luau", "Island Disco", 200]];const COLL=[];NEWREC.push(...[["Harvest", "Sun", "Hay", 30], ["Hay", "Farm", "Cow", 90], ["Hay", "Ranch", "Cow", 90], ["Cow", "Bucket", "Milk", 60], ["Cow", "Pottery", "Milk", 60], ["Milk", "Salt", "Cheese", 70], ["Cheese", "Fire", "Fondue", 90], ["Milk", "Banana", "Milkshake", 60], ["Milk", "Wood", "Butter", 40], ["Butter", "Bread", "Croissant", 70], ["Cow", "Fire", "Steak", 80], ["Furnace", "Fishing Net", "Grill", 40], ["Steak", "Grill", "BBQ Party", 140], ["Steak", "Bread", "Burger", 90], ["Steak", "Rope", "Sausage", 50], ["Sausage", "Bread", "Hot Dog", 70], ["Tea Leaves", "Steam", "Tea", 25], ["Tea Leaves", "Fresh Water", "Tea", 25], ["Pottery", "Tea Leaves", "Teapot", 30], ["Tea", "Teapot", "Tea Party", 60], ["Tea", "Milk", "Milk Tea", 70], ["Milk Tea", "Pearl", "Bubble Tea", 110], ["Tea Leaves", "Stone", "Matcha", 30], ["Bread", "Cheese", "Pizza", 90], ["Cocoa Bean", "Milk", "Chocolate", 80], ["Chocolate", "Steam", "Hot Chocolate", 60], ["Chocolate", "Milk", "Hot Chocolate", 60], ["Fries", "Grilled Fish", "Fish & Chips", 70], ["Chocolate", "Cheese", "Switzerland", 200], ["Fondue", "Chocolate", "Switzerland", 200], ["Pizza", "Fashion Week", "Italy", 250], ["Pizza", "Vase", "Italy", 200], ["Croissant", "Cheese", "France", 200], ["Croissant", "Fashion Week", "France", 250], ["Tea Party", "Fish & Chips", "UK", 200], ["Sushi", "Matcha", "Japan", 200], ["Sushi", "Tea", "Japan", 200], ["Hot Dog", "Stadium", "USA", 220], ["BBQ Party", "Fast Food Meal", "USA", 220], ["Football Team", "Fruit Salad", "Brazil", 200], ["Match", "Beach Volleyball", "Brazil", 200], ["The GOAT", "Steak", "Argentina", 300], ["BBQ Party", "Champions", "Argentina", 300], ["Trophy", "Brazil", "World Cup", 350], ["Trophy", "Argentina", "World Cup", 350]]);NEWREC.push(...[["Fishing Net", "Wood", "Goal", 30], ["Goal", "Garden", "Football Pitch", 60], ["Sneaker", "Ball", "Football Boots", 50], ["T-Shirt", "Ball", "Jersey", 40], ["Jersey", "Jersey", "Football Team", 70], ["Football Team", "Football Pitch", "Match", 140], ["Football Boots", "Football Team", "Match", 140], ["Gold Bars", "Cloth", "Medal", 60], ["Medal", "Medal", "Trophy", 120], ["Gold Bars", "Pottery", "Trophy", 120], ["Match", "Trophy", "Champions", 220], ["Champions", "Golden Statue", "The GOAT", 400], ["Ranch", "Trophy", "The GOAT", 400], ["Champions", "Football Boots", "The GOAT", 400], ["Fishing Net", "Molten Plastic", "Racket", 35], ["Plastic Sheet", "Planks", "Surfboard", 45], ["Surfboard", "Tsunami", "Big Wave Rider", 150], ["Tin Can", "Tin Can", "Dumbbell", 20], ["Dumbbell", "House", "Gym", 80], ["Smoothie", "Egg", "Protein Shake", 50], ["Protein Shake", "Gym", "Champions", 220], ["Plastic", "Rope", "Buoy", 20], ["Molten Plastic", "Rope", "Life Ring", 25], ["Life Ring", "Planks", "Lifeguard Tower", 60], ["Lifeguard Tower", "Whistle", "Lifeguard", 90], ["Buoy", "Dock", "Marina", 140], ["Buoy", "Anchor", "Mooring", 20], ["Wood", "Water", "Paper", 8], ["Paper", "Ink", "Cards", 20], ["Paper", "Quill", "Journal", 40], ["Dice", "Planks", "Board Game", 30], ["Paper", "Dice", "Board Game", 30], ["Cards", "Gold Bars", "Casino", 150], ["Board Game", "Cards", "Game Night", 60], ["Dice", "Dice", "Lucky Roll", 15], ["Board Game", "Statue", "Chess", 70], ["Robot", "Board Game", "Arcade", 160], ["Battery", "Board Game", "Video Game", 80], ["Video Game", "Robot", "Arcade", 160], ["Seaweed", "Salt", "Toothpaste", 15], ["Toothbrush", "Toothpaste", "Sparkling Smile", 40], ["Soap", "Water", "Bubbles", 10], ["Pottery", "Fresh Water", "Bathtub", 35], ["Bathtub", "Bubbles", "Bubble Bath", 60], ["Bubble Bath", "Toy Duck", "Spa Day", 120], ["Cloth", "Water", "Towel", 15], ["Towel", "Beach Outfit", "Beach Day", 70], ["Bathtub", "House", "Bathroom", 80], ["Pottery", "Bucket", "Toilet", 30], ["Paper", "Paper", "Toilet Paper", 10], ["Toilet", "Toilet Paper", "Bathroom", 80], ["Toothbrush", "Robot", "Electric Toothbrush", 90], ["Toothbrush", "Battery", "Electric Toothbrush", 90], ["Soap", "Pirate", "Squeaky Pirate", 40], ["Dice", "Treasure Chest", "Jackpot", 180], ["Lucky Roll", "Casino", "Jackpot", 180], ["Ball", "Sand", "Beach Volleyball", 30], ["Crab", "Goal", "Goalkeeper Crab", 50], ["Fast Food Meal", "Match", "Stadium", 180], ["Champions", "Stadium", "The GOAT", 400], ["Bubbles", "Island Disco", "Foam Party", 160], ["Trophy", "Big Catch", "Fishing Champion", 160], ["Ball", "Seagull", "Beach Volleyball", 30], ["Whistle", "Football Team", "Match", 140], ["Soap", "Sparkling Smile", "Spa Day", 120], ["Sun Hat", "Towel", "Beach Day", 70]]);NEWREC.forEach(([a,b,r,p])=>{const k=[a,b].sort().join('+');if(REC[k])COLL.push(k);else REC[k]=[r,p]});
+const PTS0={};Object.values(REC).forEach(([r,p])=>PTS0[r]=p);
+const ALT=[["Wood", "Wood", "Planks"], ["Rope", "Rope", "Fishing Net"], ["Planks", "Planks", "Raft"], ["Brick", "Brick", "House"], ["Stone", "Stone", "Brick"], ["Sand", "Fire", "Glass"], ["Wood", "Fire", "Torch"], ["Water", "Mud", "Clay"], ["Seeds", "Water", "Sprout"], ["Seeds", "Sand", "Sprout"], ["Seeds", "Sun", "Sprout"], ["Coconut", "Water", "Coconut Milk"], ["Coconut", "Axe", "Coconut Milk"], ["Fish", "Salt", "Smoked Fish"], ["Fish", "Torch", "Grilled Fish"], ["Fish", "Planks", "Fish Barrel"], ["Crab", "Torch", "Crab Feast"], ["Crab", "Water", "Tide Pool"], ["Shell", "Water", "Tide Pool"], ["Starfish", "Shell", "Tide Pool"], ["Pearl", "Rope", "Necklace"], ["Shell", "Glass", "Wind Chime"], ["Bottle", "Journal", "Message in a Bottle"], ["Bottle", "Quill", "Message in a Bottle"], ["Fire", "Mud", "Brick"], ["Clay", "Sun", "Brick"], ["Torch", "Hut", "Cozy Hut"], ["Lantern", "Hut", "Cozy Hut"], ["Lantern", "House", "Cozy Hut"], ["House", "Torch", "Cozy Hut"], ["Night Light", "Hut", "Cozy Hut"], ["Glass", "Clay", "Vase"], ["Pottery", "Water", "Vase"], ["Pottery", "Flower", "Bouquet"], ["Flower", "Rope", "Necklace"], ["Flower", "Garden", "Royal Garden"], ["Flower", "Fountain", "Royal Garden"], ["Flower", "Seeds", "Garden"], ["Sprout", "Sand", "Palm Tree"], ["Palm Tree", "Palm Tree", "Hammock"], ["Cloth", "Palm Tree", "Hammock"], ["Planks", "Seaweed", "Hut"], ["Wood", "Seaweed", "Hut"], ["Wood", "Mud", "Hut"], ["Hut", "Brick", "House"], ["Hut", "Planks", "House"], ["House", "House", "Village"], ["Hut", "Hut", "Village"], ["Village", "Village", "Town"], ["Town", "Harbor", "Port City"], ["Market", "Harbor", "Port City"], ["Market", "Galleon", "Trade Empire"], ["Sail", "Planks", "Sailboat"], ["Sailboat", "Anchor", "Ship"], ["Raft", "Cloth", "Sailboat"], ["Raft", "Anchor", "Mooring"], ["Raft", "Fish", "Fishing Boat"], ["Ship", "Cannon", "Warship"], ["Warship", "Pirate", "Pirate Fleet"], ["Pirate", "Ship", "Pirate Captain"], ["Pirate", "Galleon", "Pirate Captain"], ["Pirate Captain", "Warship", "Pirate Fleet"], ["Pirate Flag", "Raft", "Pirate"], ["Molten Metal", "Planks", "Shield"], ["Molten Metal", "Golden Idol", "Gold Bars"], ["Treasure Chest", "Royal Necklace", "Pirate Hoard"], ["Treasure Route", "Tools", "Treasure Chest"], ["Old Map", "Telescope", "Star Chart"], ["Compass", "Star Chart", "Explorer's Log"], ["Telescope", "Lighthouse", "Observatory"], ["Lens", "Lens", "Telescope"], ["Glass", "Glass", "Lens"], ["Glass", "Sun", "Lens"], ["Mirror", "Fire", "Signal Mirror"], ["Signal Mirror", "Raft", "Rescue Ship"], ["Signal Mirror", "Ship", "Rescue Ship"], ["Steam", "Cloth", "Hot Air Balloon"], ["Hot Air Balloon", "Old Map", "Sky Expedition"], ["Hot Air Balloon", "Telescope", "Sky Expedition"], ["Salt", "Fish", "Smoked Fish"], ["Steam", "Sand", "Salt"], ["Sushi", "Coconut Milk", "Island Feast"], ["Smoked Fish", "Coconut Milk", "Island Feast"], ["Crab Pot", "Fire", "Crab Feast"], ["Island Feast", "Hut", "Tavern"], ["Island Feast", "Fire", "Luau"], ["Island Feast", "Palm Tree", "Luau"], ["Tavern", "Village", "Town"], ["Fish Barrel", "House", "Market"], ["Smoothie", "Hammock", "Paradise"], ["Beach Villa", "Smoothie", "Paradise"], ["Reef", "Glass", "Aquarium"], ["Coral", "Glass", "Aquarium"], ["Coral", "Rope", "Necklace"], ["Coral", "Coral", "Reef"], ["Mermaid Scale", "Reef", "Mermaid Charm"], ["Mermaid Charm", "Golden Idol", "Sea Crown"], ["Sea Crown", "Sacred Temple", "Ocean Temple"], ["Trident", "Palace", "Atlantis"], ["Trident", "Mermaid Scale", "Mermaid Charm"], ["Golden Idol", "Statue", "Golden Statue"], ["Golden Idol", "Stone", "Sacred Temple"], ["Golden Idol", "House", "Palace"], ["Statue", "Fountain", "Royal Garden"], ["Tools", "Wood", "Planks"], ["Tools", "House", "Workshop"], ["Workshop", "Raft", "Shipyard"], ["Shipyard", "Planks", "Ship"], ["Diving Helmet", "Rope", "Pearl Diver"], ["Nectar", "Coconut Milk", "Smoothie"], ["Harvest", "Grilled Fish", "Island Feast"], ["Garden", "Hut", "Farm"], ["Garden", "House", "Farm"], ["Farm", "Farm", "Village"], ["Anchor", "Planks", "Dock"], ["Dock", "Ship", "Harbor"], ["Lighthouse", "Ship", "Harbor"], ["Star Chart", "Ship", "Explorer's Log"], ["Feather", "Shell", "Wind Chime"], ["Squid", "Fire", "Grilled Fish"], ["Cloth", "Wood", "Sail"], ["Rainbow", "Shell", "Rainbow Pearl"], ["Stone", "Sun", "Sundial"], ["Sandcastle", "Pirate Flag", "Royal Sandcastle"], ["Sandcastle", "Pearl", "Royal Sandcastle"], ["Sand", "Starfish", "Sandcastle"], ["Necklace", "Gold Bars", "Royal Necklace"], ["Message in a Bottle", "Sailboat", "Rescue Ship"], ["Brick", "Fire", "Furnace"], ["Furnace", "Tin Can", "Molten Metal"], ["Furnace", "Sand", "Glass"], ["Furnace", "Clay", "Pottery"], ["Coral", "Seaweed", "Reef"], ["Fish", "Fish", "Aquarium"], ["Shell", "Shell", "Necklace"], ["Sand", "Sand", "Sandcastle"], ["Water", "Water", "Tide Pool"], ["Stone", "Planks", "Hut"], ["Fire", "Fire", "Furnace"], ["Steam", "Water", "Rainbow"], ["Torch", "Torch", "Lighthouse"], ["Seaweed", "Sun", "Seaweed Chips"], ["Coconut", "Fire", "Coconut Milk"], ["Flower", "Flower", "Bouquet"], ["Seeds", "Seeds", "Garden"], ["Sprout", "Sprout", "Garden"], ["Rope", "Wood", "Raft"], ["Rope", "Stone", "Anchor"]];let altN=0;ALT.forEach(([a,b,r])=>{const k=[a,b].sort().join('+');if(!REC[k]&&PTS0[r]!==undefined){REC[k]=[r,PTS0[r]];altN++}});
+const PTS={};Object.values(REC).forEach(([r,p])=>PTS[r]=p);
+
+const RCOL={c:'#9fb3c8',u:'#6ee7a8',r:'#5cc8ff',e:'#c084fc',l:'#ffc94d',t:'#5ef2c8'};
+const FLAV={'Tea Leaves':'Smells like an English afternoon.','Cocoa Bean':'The start of something sweet.',Ball:'Still bouncy.',Soap:'Smells like lemons.',Dice:'Feeling lucky?',Toothbrush:'Barely used. Probably.',Whistle:'Tweet! Foul on the pitch.',Plastic:'The sea keeps giving it back.','Banana Peel':'Somebody had lunch.',Worm:'Wiggly. Useful.','Old Boot':'Classic catch.',Sock:'Where is the other one?',Egg:'Still warm?!',Seagull:'It stole your snack.',Battery:'Still has a spark!',Hourglass:'+30 seconds on the island!','Lucky Clock':'+30 seconds on the island!',Feather:'A gift from a passing gull.','Tin Can':'Beans, long gone.',Cloth:'A torn scrap of somebody\'s sail.',Seeds:'Something wants to grow.',Squid:'Inky and offended.',Jellyfish:'Glows faintly. Don\'t touch.','Sea Urchin':'Spiky outside, tasty inside.',Anchor:'Heavier than your raft.','Mermaid Scale':'Shimmers like the deep.',Trident:'Hums with old sea power.',Seaweed:'Slippery. Smells like the deep.',Stone:'Heavy, round, honest.',Shell:'Still hums with the sea.',Fish:'Solid - swims with the school.',Starfish:'Five arms, zero worries.',Rope:'Frayed, but it holds.',Bottle:'Empty. For now.',Coconut:'Floated here from somewhere.',Crab:'Sideways and unimpressed.',Pearl:'A perfect little moon.',Compass:'Always points somewhere else.','Old Map':'X marks... something.','Golden Idol':'It is watching you.'};
+const $=id=>document.getElementById(id);
+
+// ---------- top-down scene ----------
+const cv=$('cv'),x=cv.getContext('2d');x.imageSmoothingEnabled=false;
+const VW=VIEW==='mobile'?Math.min(innerWidth,430):innerWidth;const PORTRAIT=VIEW==='desktop'?false:VIEW==='mobile'?true:(innerWidth<640&&innerHeight>innerWidth*1.1);let W=240,H=150;
+if(PORTRAIT){W=160;H=Math.round(W*Math.max(1.1,(innerHeight-200)/Math.max(200,VW-32)));cv.width=W;cv.height=H;x.imageSmoothingEnabled=false}
+const px=(c,a,b,w=1,h=1)=>{x.fillStyle=c;x.fillRect(a|0,b|0,w,h)};
+let cam=0,t=0,phase='fish',bobber=null,shown=null,islandX=320,islandY=75,raftX=30,raftY=64;if(PORTRAIT){raftX=W/2-12;raftY=H-48;islandX=W/2;islandY=-60}
+const motes=[...Array(40)].map(()=>({x:rnd()*W,y:rnd()*H,s:.1+rnd()*.3}));
+const shadows=[...Array(5)].map(()=>({x:rnd()*W,y:rnd()*H,v:.15+rnd()*.25}));
+function blob(cx,cy,r,col){for(let y=-r;y<=r;y++){const w=Math.round(Math.sqrt(r*r-y*y)*(1+0.07*Math.sin(y*1.3)));px(col,cx-w,cy+y,w*2,1)}}
+function palm(cx,cy){const d='#173b2e',g='#2f7a55';px(d,cx-5,cy,11,1);px(d,cx,cy-5,1,11);px(d,cx-3,cy-3,1,1);px(d,cx+3,cy+3,1,1);px(d,cx+3,cy-3,1,1);px(d,cx-3,cy+3,1,1);px(g,cx-3,cy-1,7,3);px(g,cx-1,cy-3,3,7);px('#6b4423',cx,cy,1,1)}
+function draw(){
+  t++;
+  // depth gradient water
+  for(let y=0;y<H;y+=2){const k=y/H;px(`rgb(${14+8*(1-k)|0},${40+30*(1-k)|0},${72+30*(1-k)|0})`,0,y,W,2)}
+  // light rays
+  x.globalAlpha=.06;for(let i=0;i<5;i++){x.fillStyle='#bfefff';x.beginPath();const o=(i*55+Math.sin(t/120+i)*10)|0;x.moveTo(o,0);x.lineTo(o+18,0);x.lineTo(o-30,H);x.lineTo(o-50,H);x.fill()}x.globalAlpha=1;
+  // fish shadows
+  const CV=phase==='arrive'?0.6:0;if(CV)cam+=CV;
+  shadows.forEach(s=>{if(PORTRAIT){s.y+=CV;if(s.y>H+4)s.y=-4}else s.x-=CV;s.x+=s.v;if(s.x>W+10)s.x=-10;const c='#0a1a2e';px(c,s.x+1,s.y,4,1);px(c,s.x,s.y+1,6,1);px(c,s.x+1,s.y+2,4,1);px(c,s.x-2,s.y,1,1);px(c,s.x-1,s.y+1,1,1);px(c,s.x-2,s.y+2,1,1)});
+  // wave glints
+  for(let i=0;i<26;i++){const wx=((i*41+t/8-(PORTRAIT?0:cam))%(W+10)+W+10)%(W+10)-5,wy=((i*29)+(PORTRAIT?cam:0))%H;px('#2d5a85',wx,wy,4,1)}
+  motes.forEach(m=>{m.y-=m.s;if(PORTRAIT)m.y+=CV;else{m.x-=CV;if(m.x<0)m.x=W}if(m.y>H)m.y=0;if(m.y<0)m.y=H;px('#6fa8cc',m.x,m.y,1,1)});
+  // island
+  if(phase!=='fish'){const ix=islandX,iy=islandY;blob(ix,iy,40,'#2a6a8f');blob(ix,iy,36,'#3d86a8');blob(ix,iy,32,'#d9bf7f');blob(ix+3,iy-2,24,'#3f8f5f');blob(ix+5,iy-4,16,'#4ea86c');
+    palm(ix-8,iy-10);palm(ix+12,iy-6);palm(ix+2,iy+10);palm(ix-14,iy+4);px('#8b98a8',ix-24,iy+16,4,3);px('#f4a6c1',ix+26,iy+8,2,2);
+    if(phase==='arrive'){if(!window._arr){window._arr={iy:islandY,ix:islandX,ry:raftY,rx:raftX}}const A=window._arr;
+      if(PORTRAIT){islandY+=CV;const pr=Math.min(1,(islandY-A.iy)/(H*0.3-A.iy));raftY=A.ry+((H*0.3+48)-A.ry)*pr;for(let i=0;i<3;i++)px('rgba(255,255,255,.35)',raftX+4+i*7,raftY+22+((t+i*5)%9),2,1);if(pr>=1){phase='craft';startCraft()}}
+      else{islandX-=CV;const pr=Math.min(1,(A.ix-islandX)/(A.ix-165));raftX=A.rx+((165-72)-A.rx)*pr;for(let i=0;i<3;i++)px('rgba(255,255,255,.35)',raftX-4-((t+i*5)%9),raftY+3+i*6,1,2);if(pr>=1){phase='craft';startCraft()}}}}
+  // raft (top-down)
+  const bob=Math.sin(t/22)*.6,rx=raftX,ry=raftY+bob;
+  px('#0b1a2c',rx+1,ry+2,26,18);
+  for(let i=0;i<6;i++){px(i%2?'#9a6a3a':'#80552c',rx+i*4,ry,4,18);px('#4b2f17',rx+i*4,ry,1,18)}
+  px('#4b2f17',rx,ry+4,24,1);px('#4b2f17',rx,ry+13,24,1);
+  px('#e04a5f',rx+8,ry+7,8,5);px('#f2c49b',rx+7,ry+8,1,2);px('#f2c49b',rx+16,ry+8,1,2);px('#3b2414',rx+10,ry+6,4,4);
+  const tipX=rx+34,tipY=ry-4;x.strokeStyle='#2a1a0e';x.lineWidth=1;x.beginPath();x.moveTo(rx+16,ry+9);x.lineTo(tipX,tipY);x.stroke();
+  if(bobber){const p=Math.min(1,(t-bobber.t)/20),bx=tipX+(bobber.x-tipX)*p,by=tipY+(bobber.y-tipY)*p-Math.sin(p*Math.PI)*20;
+    x.strokeStyle='rgba(220,232,245,.6)';x.beginPath();x.moveTo(tipX,tipY);x.lineTo(bx,by);x.stroke();
+    if(p>=1){const rr=(t/3)%10;x.strokeStyle='rgba(94,225,255,.5)';x.strokeRect(bx-rr,by-rr/2,rr*2,rr)}
+    px('#ff5c8a',bx-1,by-1,3,3);px('#fff',bx-1,by-1,3,1)}
+  if(shown&&t-shown.t<60){const k=Math.min(1,(t-shown.t)/15);x.drawImage(IMG[shown.n],shown.x-8,shown.y-8-k*14,16,16)}
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ---------- sound (WebAudio synth, no files) ----------
+let AC=null,muted=false;
+function tone(f,d=.12,type='square',v=.06,when=0,slide=0){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t0=AC.currentTime+when,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,t0);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t0+d);g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(g).connect(AC.destination);o.start(t0);o.stop(t0+d+.02)}catch(e){}}
+function noise(d=.3,v=.08){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),c=b.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=(Math.random()*2-1)*(1-i/c.length);
+  const s=AC.createBufferSource(),g=AC.createGain(),fl=AC.createBiquadFilter();fl.type='lowpass';fl.frequency.value=900;s.buffer=b;g.gain.value=v;s.connect(fl).connect(g).connect(AC.destination);s.start()}catch(e){}}
+function bandNoise(d,v,freq,q=1.2,when=0){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),c=b.getChannelData(0);
+  for(let i=0;i<c.length;i++)c[i]=(Math.random()*2-1)*Math.pow(1-i/c.length,3);const s=AC.createBufferSource(),g=AC.createGain(),fl=AC.createBiquadFilter();
+  fl.type='bandpass';fl.frequency.value=freq;fl.Q.value=q;s.buffer=b;g.gain.value=v;s.connect(fl).connect(g).connect(AC.destination);s.start(AC.currentTime+when)}catch(e){}}
+const sfx={plop:()=>{tone(520,.12,'sine',.12,0,140);bandNoise(.25,.5,1800,1.5);bandNoise(.4,.25,700,.8,.05);tone(900,.05,'sine',.03,.12,1300);tone(1100,.05,'sine',.025,.2,1500)},
+ sink:()=>{tone(400,.25,'sine',.1,0,90);bandNoise(.5,.45,900,.9);tone(700,.06,'sine',.03,.25,1000);tone(850,.06,'sine',.03,.35,1200)},
+ special:()=>{[523,659,784,1047,1319,1568,2093].forEach((f,i)=>tone(f,.25,'triangle',.06,i*.06));[1047,1319,1568].forEach(f=>tone(f,.9,'sine',.035,.45));
+  for(let i=0;i<8;i++)tone(2500+Math.random()*2000,.06,'sine',.02,.5+i*.07)},
+ open:()=>tone(660,.08,'triangle',.05,0,990),cast:()=>tone(900,.25,'sine',.05,0,200),splash:()=>noise(.35,.12),
+ catch:r=>{if(r==='t'||r==='l'||r==='e'){sfx.special();return}const n={c:[523],u:[523,659],r:[523,659,784]}[r];n.forEach((f,i)=>tone(f,.15,'square',.05,i*.09))},
+ pick:()=>tone(660,.05,'square',.03),pop:()=>tone(880,.06,'triangle',.06,0,1200),fail:()=>{tone(180,.12,'sawtooth',.04);tone(140,.15,'sawtooth',.04,.08)},
+ win:p=>{const s=p>=100?[523,784,1047,1568]:p>=40?[523,659,1047]:[659,988];s.forEach((f,i)=>tone(f,.14,'square',.05,i*.07))},
+ tick:()=>tone(1200,.03,'square',.03),land:()=>[392,523,659,784].forEach((f,i)=>tone(f,.2,'triangle',.06,i*.12)),
+ end:()=>[784,659,523,392,523].forEach((f,i)=>tone(f,.18,'square',.05,i*.13))};
+document.body.insertAdjacentHTML('beforeend','<button id="mute" style="position:fixed;bottom:10px;right:10px;z-index:60;font-family:Silkscreen;font-size:10px;background:#0f1d33;color:#dce8f5;border:2px solid #1e3354;padding:6px 8px;cursor:pointer">SOUND ON</button>');
+document.body.insertAdjacentHTML('beforeend','<button id="viewBtn" style="position:fixed;bottom:10px;left:10px;z-index:60;font-family:Silkscreen;font-size:10px;background:#0f1d33;color:#dce8f5;border:2px solid #1e3354;padding:6px 8px;cursor:pointer">VIEW: '+VIEW.toUpperCase()+'</button>');
+$('viewBtn').onclick=()=>{const order=['auto','desktop','mobile'],nv=order[(order.indexOf(VIEW)+1)%3],t=[];if(RANDOM)t.push('random');if(nv!=='auto')t.push(nv);location.hash=t.join('-');location.reload()};
+$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'SOUND OFF':'SOUND ON'};
+// ---------- help ----------
+const HELP_START=`<h4>CASTAWAY DAILY</h4><ul>
+<li><i>🎣</i>Tap the water to catch items.</li>
+<li><i>🏆</i>Combine your items to score points.</li></ul>`;
+const HELP_CRAFT=`<h4>CRAFTING GUIDE</h4><ul>
+<li><i>🧪</i><b>Combine items to score points.</b> Every new creation counts.</li>
+<li><i>🏝</i>Don't forget the island basics:<span class="basics">${BASE.map(n=>'<span>'+img(n)+'<small>'+n+'</small></span>').join('')}</span></li>
+<li><i>✋</i>Tap or drag items onto the board, then drag one onto another.</li>
+<li><i>✨</i>Holding an item? A <span style="color:var(--gold)">gold glow</span> shows where you can make something new.</li>
+<li><i><span class="demo">3</span></i>The number shows how many new items you can still make with it.</li>
+<li><i>🔗</i>Longer chains = more points.</li>
+<li><i>🌊</i>Board full? Drag items into the sea.</li></ul>`;
+function codexList(){return store.get('cw_codex',[])}
+function showCodex(){const c=new Set(codexList()),h=document.createElement('div');h.id='help';
+  const last=store.get('cw_last_new',[]),RO={c:0,u:1,r:2,e:3,l:4};
+  const catches=LOOT.filter(l=>!TIMEBONUS[l[0]]).sort((a,b)=>RO[a[1]]-RO[b[1]]||a[0].localeCompare(b[0])).map(l=>l[0]);
+  const crafted=[...new Set(Object.values(REC).map(r=>r[0]))].filter(n=>!catches.includes(n)&&!BASE.includes(n)).sort((a,b)=>PTS[a]-PTS[b]||a.localeCompare(b));
+  const sec=(t,arr)=>{const got=arr.filter(n=>c.has(n)).length;return `<div class="cxh">${t}<span>${got} / ${arr.length}</span></div><div class="codex">${arr.map(n=>c.has(n)?`<div class="cx${last.includes(n)?' nw':''}">${img(n)}<span>${n}</span></div>`:`<div class="cx miss">${img(n)}<span>???</span></div>`).join('')}</div>`};
+  const tiers=[['BASIC CREATIONS',crafted.filter(n=>PTS[n]<30)],['ADVANCED',crafted.filter(n=>PTS[n]>=30&&PTS[n]<100)],['SPECIAL ★',crafted.filter(n=>PTS[n]>=100)]];
+  BASE.forEach(n=>c.add(n));const lucky=Object.keys(TIMEBONUS);const total=BASE.length+lucky.length+catches.length+crafted.length,got=[...BASE,...lucky,...catches,...crafted].filter(n=>c.has(n)).length;
+  h.innerHTML=`<div class="box"><h4>COLLECTION</h4><div class="cxbar"><i style="width:${Math.round(got/total*100)}%"></i></div><p style="color:var(--dim);margin:6px 0 4px">${got} / ${total} found${last.length?' · <span style="color:var(--gold)">gold frame</span> = new last game':''}</p>
+  <div class="cxscroll">${sec('ISLAND BASICS',BASE)}${sec('CATCHES',catches)}${sec('LUCKY FINDS ⏱',lucky)}${tiers.map(([t,a])=>sec(t,a)).join('')}</div><button class="btn">CLOSE</button></div>`;
+  document.body.appendChild(h);h.querySelector('.btn').onclick=()=>h.remove()}
+function showHelp(craftStart){const h=document.createElement('div');h.id='help';
+  h.innerHTML=`<div class="box">${phase==='fish'?HELP_START:HELP_CRAFT}<button class="btn">${phase==='fish'?'START FISHING':craftStart?'START '+Math.floor(timeLeft/60)+':'+String(timeLeft%60).padStart(2,'0')+' ▶':'BACK'}</button>${phase==='fish'?'<button class="btn2" id="codexBtn">MY COLLECTION ('+codexList().length+')</button>':''}</div>`;const cb=h.querySelector('#codexBtn');if(cb)cb.onclick=showCodex;document.body.appendChild(h);
+  const rc=h.querySelector('#rndChk');if(rc)rc.onchange=()=>{RANDOM=rc.checked;try{history.replaceState(null,'','#'+setHash())}catch(e){}$('dayLbl').textContent=RANDOM?'RANDOM CATCH':'DAILY · '+TODAY};
+  h.querySelector('button').onclick=()=>{sfx.open();h.remove();if(craftStart&&pendingTimer){pendingTimer();pendingTimer=null;if(!store.get('cw_tut',false))startTut()}}}
+function untilMidnight(){let d;try{const p=zurichParts();d=86400-(+p.hour*3600+ +p.minute*60+ +p.second)}catch(e){const n=new Date(),m=new Date(n);m.setHours(24,0,0,0);d=Math.max(0,m-n)/1000|0}d=Math.max(0,d);return [d/3600|0,(d/60|0)%60,d%60].map(v=>String(v).padStart(2,'0')).join(':')}
+function showLocked(){const L=store.get('cw_last',{score:0,best:null,fresh:0}),h=document.createElement('div');h.id='help';
+  h.innerHTML=`<div class="box" style="text-align:center"><h4>SEE YOU TOMORROW</h4>
+  <p style="margin:0 0 12px">You already played today.</p>
+  <div class="stats" style="margin-bottom:12px"><div class="panel"><div class="lbl">TODAY'S SCORE</div><div class="val">${L.score}</div></div><div class="panel"><div class="lbl">NEW FINDS</div><div class="val">+${L.fresh}</div></div></div>
+  ${L.best?`<p style="margin:0 0 12px;color:var(--dim)">Best creation: <b style="color:var(--ink)">${L.best}</b></p>`:''}
+  <div class="lbl">NEXT CATCH IN</div><div class="val" id="cd" style="font-size:30px">${untilMidnight()}</div>
+  <button class="btn2" id="lkCol">MY COLLECTION</button><a class="bmc" href="https://buymeacoffee.com/juulian" target="_blank" rel="noopener">☕ Enjoying the game? Buy me a coffee</a>${DEV?'<button class="btn2" id="lkDev" style="color:var(--dim)">PLAY ANYWAY (TEST)</button>':''}</div>`;
+  document.body.appendChild(h);const iv=setInterval(()=>{const c=h.querySelector('#cd');if(!c)return clearInterval(iv);c.textContent=untilMidnight();if(untilMidnight()==='00:00:00')location.reload()},1000);
+  h.querySelector('#lkCol').onclick=showCodex;const dv=h.querySelector('#lkDev');if(dv)dv.onclick=()=>{h.remove();showHelp(false)}}
+setTimeout(()=>{if(RESUMED)return;store.get('cw_played',null)===TODAY?showLocked():showHelp(false)},300);
+// ---------- reveal ----------
+let revTO;function reveal(n,sub,col,flav){$('rimg').src=IMG[n].toDataURL();$('rimg').style.filter=`drop-shadow(0 0 12px ${col})`;
+  $('rname').textContent=n.toUpperCase();$('rname').style.color=col;$('rname').style.textShadow=`0 0 14px ${col}`;
+  $('rrar').textContent=sub;$('rrar').style.color=col;$('rflav').textContent=flav||'';
+  $('reveal').classList.add('on');clearTimeout(revTO);revTO=setTimeout(()=>$('reveal').classList.remove('on'),1800)}
+
+// ---------- fishing (tap to cast) ----------
+let bonusT=0;const luckyGot=[];function flash(c){const d=document.createElement('div');d.className='flash';d.style.setProperty('--fc',c);document.body.appendChild(d);setTimeout(()=>d.remove(),900)}
+let casts=5,pool=[...LOOT],busy=false;const inv=[...BASE];
+$('dayLbl').textContent='DAILY · '+TODAY;$('pips').innerHTML='<div class="pip"></div>'.repeat(5);
+function roll(){let P=pool;const allC=inv.slice(BASE.length).every(n=>{const l=LOOT.find(x=>x[0]===n);return l&&l[1]==='c'});
+  if(casts===1&&allC)P=pool.filter(l=>l[1]!=='c'&&l[1]!=='t');
+  const tot=P.reduce((a,l)=>a+l[2],0);let r=Math.random()*tot;for(const l of P){if((r-=l[2])<0)return l}return P[0]}
+cv.addEventListener('click',e=>{
+  if(phase!=='fish'||busy||casts<=0)return;
+  const b=cv.getBoundingClientRect(),mx=(e.clientX-b.left)/b.width*W,my=(e.clientY-b.top)/b.height*H;
+  if(mx>raftX-4&&mx<raftX+40&&my>raftY-8&&my<raftY+24){$('log').textContent='Tap the water, not the raft!';return}
+  sfx.cast();setTimeout(sfx.plop,330);busy=true;$('reveal').classList.remove('on');bobber={x:mx,y:my,t};$('hint').classList.add('hide');$('log').textContent='Waiting for a bite...';
+  // a little distance bonus: far casts slightly favour rare loot
+  const far=Math.min(1,Math.hypot(mx-raftX,my-raftY)/200);
+  const l=roll(),[n,r]=l,big='relt'.includes(r),wait=900+rnd()*900;
+  if(big)setTimeout(()=>{$('log').innerHTML='<b style="color:var(--gold)">Something BIG is pulling!!</b>';cv.classList.add('shake');sfx.tick()},wait*.6);
+  setTimeout(()=>{cv.classList.remove('shake');pool=pool.filter(p=>p!==l);shown={n,x:mx,y:my,t};bobber=null;
+    if(big)flash(RCOL[r]);sfx.catch(r);reveal(n,'★ '+R[r],RCOL[r],FLAV[n]);
+    if(r==='t'){luckyGot.push(n);timeLeft+=TIMEBONUS[n];setTimeout(saveRun,0);bonusT+=TIMEBONUS[n];$('log').innerHTML=`<b style="color:${RCOL.t}">+${TIMEBONUS[n]}s on the island!</b> Free cast - try again.`;busy=false;$('hint').classList.remove('hide');return}
+    inv.push(n);const i=5-casts;casts--;setTimeout(saveRun,0);const pip=$('pips').children[i];pip.style.background=RCOL[r];pip.style.boxShadow=`0 0 8px ${RCOL[r]}`;
+    $('log').innerHTML=`Caught <b>${n}</b>`;$('valL').textContent=casts;
+    $('phaseLbl').textContent=casts?`CAST ${6-casts} OF 5`:'LAND AHOY';busy=false;
+    if(casts>0)$('hint').classList.remove('hide');
+    else setTimeout(()=>{phase='arrive';$('log').textContent='An island appears on the horizon...'},2000)},wait+(big?900:0));
+});
+
+// ---------- crafting (Little Alchemy style) ----------
+let total=0,best=null,timeLeft=120,freshName=null;const made=[];
+const ws=$('ws'),list=$('list');let drag=null,pending=null;
+function startCraft(){sfx.land();document.body.classList.add('crafting');window.scrollTo(0,0);const mb=$('mute');ws.appendChild(mb);mb.style.cssText+=';position:absolute;top:8px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);z-index:5';REACH=(()=>{const S=new Set(inv);let g=true;while(g){g=false;for(const k in REC){const [a,b]=k.split('+');if(S.has(a)&&S.has(b)&&!S.has(REC[k][0])){S.add(REC[k][0]);g=true}}}return S})();
+  setTimeout(()=>{$('stage').classList.add('hide');$('hint').classList.add('hide');$('craftUI').classList.remove('hide');renderSide();
+    // seed workspace with the 5 catches
+    const r=ws.getBoundingClientRect();inv.filter(n=>!BASE.includes(n)).forEach(n=>spawn(n,null,null));updateHints()},600);
+  $('lblL').textContent='TIME';$('valL').textContent=timeLeft+'s';$('phaseLbl').textContent='BUILD YOUR ISLAND';
+  $('log').textContent='';
+  pendingTimer=()=>{const iv=setInterval(()=>{timeLeft--;$('valL').textContent=timeLeft+'s';if(timeLeft<=10){$('valL').style.color='var(--pink)';sfx.tick()}if(timeLeft%3==0)updateHints();if(timeLeft<=0){clearInterval(iv);end()}},1000)};
+  setTimeout(()=>{if(!store.get('cw_tut',false))showHelp(true);else{pendingTimer();pendingTimer=null}},700);saveRun();
+}
+let REACH=new Set();
+function isMaxed(n){return !Object.keys(REC).some(k=>{const [a,b]=k.split('+');if(a!==n&&b!==n)return false;const o=a===n?b:a;return REACH.has(o)&&!inv.includes(REC[k][0])})}
+function renderSide(){
+  $('sideHead').innerHTML=`ITEMS ${inv.length} · ${made.length} CREATED <span class="q" id="helpBtn2">?</span>`;$('helpBtn2').onclick=()=>showHelp(false);const keepT=list.scrollTop,keepL=list.scrollLeft;list.innerHTML='';
+  const act=inv.filter(n=>!isMaxed(n)),mx=inv.filter(n=>isMaxed(n));
+  setTimeout(()=>ws.querySelectorAll('.el:not(.sinking)').forEach(o=>{if(mx.includes(o.dataset.n)&&!o.classList.contains('drag')){o.classList.add('fading');setTimeout(()=>o.remove(),600)}}),1500);
+  [...act,...(mx.length?['__MAX__']:[]),...mx].forEach(n=>{if(n==='__MAX__'){const h=document.createElement('div');h.className='maxhead';h.textContent='MAXED OUT';list.appendChild(h);return}const d=document.createElement('div');d.className='li'+(n===freshName?' new':'')+(isMaxed(n)?' maxed':'');
+    d.dataset.n=n;d.innerHTML=`${img(n)}<span>${n}</span>${made.includes(n)?`<span class="pt">+${PTS[n]}</span>`:''}<span class="cnt"></span>`;
+    d.addEventListener('pointerdown',e=>{if(timeLeft<=0)return;pending={n,x:e.clientX,y:e.clientY}});list.appendChild(d);
+    });list.scrollTop=keepT;list.scrollLeft=keepL;
+  if(freshName&&act.includes(freshName)){const d=list.querySelector(`.li[data-n="${freshName}"]`);if(d){const lr=list.getBoundingClientRect(),dr=d.getBoundingClientRect();if(dr.top<lr.top||dr.bottom>lr.bottom||dr.left<lr.left||dr.right>lr.right)setTimeout(()=>list.scrollTo({left:d.offsetLeft-list.clientWidth/2+d.offsetWidth/2,top:d.offsetTop-list.clientHeight/2,behavior:'smooth'}),50)}}freshName=null;updateHints();
+}
+function mkEl(n,x,y,pop){{const W2=ws.clientWidth,H2=ws.clientHeight,sea=$('sea').offsetHeight,m=ws.clientWidth<500?30:42;x=Math.max(m,Math.min(W2-m,x||W2/2));y=Math.max(m+20,Math.min(H2-sea-m,y||H2/2))}const d=document.createElement('div');d.className='el'+(pop?' pop':'');d.dataset.n=n;d.innerHTML=img(n)+`<span>${n}</span>`;
+  d.style.left=x+'px';d.style.top=y+'px';ws.appendChild(d);
+  d.addEventListener('pointerdown',e=>{if(timeLeft<=0)return;e.preventDefault();beginDrag(d,e)});
+  let last=0;d.addEventListener('pointerup',()=>{const now=Date.now();if(now-last<300&&!d.moved)spawn(n,parseFloat(d.style.left),parseFloat(d.style.top),true);last=now});
+  return d}
+function freeSpot(cx,cy){const els=[...ws.querySelectorAll('.el:not(.sinking)')].map(o=>[parseFloat(o.style.left),parseFloat(o.style.top)]);const r=ws.getBoundingClientRect();
+  for(let i=0;i<400;i++){const a=i*2.4,d=i?18+i*4:0,x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d*.8;
+    if(x<34||y<70||x>r.width-34||y>r.height-($('sea').offsetHeight+40))continue;if(els.every(([ex,ey])=>Math.abs(ex-x)>GX()||Math.abs(ey-y)>GY()))return[x,y]}return[cx,cy]}
+const GX=()=>ws.clientWidth<500?58:86,GY=()=>ws.clientWidth<500?62:96;
+function anySpot(){const r=ws.getBoundingClientRect(),els=[...ws.querySelectorAll('.el:not(.sinking)')].map(o=>[parseFloat(o.style.left),parseFloat(o.style.top)]);
+  const c=[];for(let y=70;y<=r.height-($('sea').offsetHeight+42);y+=34)for(let x=38;x<=r.width-38;x+=34)c.push([x+(rnd()-.5)*14,y+(rnd()-.5)*14]);
+  const sc=p=>Math.min(1e9,...els.map(([ex,ey])=>Math.max(Math.abs(ex-p[0])/GX(),Math.abs(ey-p[1])/GY())));
+  const free=c.filter(p=>sc(p)>=1);if(free.length)return free[Math.floor(rnd()*free.length)];
+  const best=c.reduce((a,b)=>sc(b)>sc(a)?b:a,c[0]);if(sc(best)<.6)return null;return best;
+  return c.reduce((a,b)=>sc(b)>sc(a)?b:a,c[0])}
+function spawn(n,cx,cy,pop){const p=cx==null?anySpot():freeSpot(cx,cy);if(!p){$('log').textContent='Board full! Drag items into the sea.';sfx.fail();return null}return mkEl(n,p[0],p[1],pop)}
+function beginDrag(d,e){sfx.pick();markPartners(d.dataset.n);d.moved=false;d.classList.add('drag');drag={d,sx:e.clientX,sy:e.clientY}}
+function overlapTarget(d){const x=parseFloat(d.style.left),y=parseFloat(d.style.top);let bestT=null,bd=46;
+  ws.querySelectorAll('.el').forEach(o=>{if(o===d)return;const dd=Math.hypot(parseFloat(o.style.left)-x,parseFloat(o.style.top)-y);if(dd<bd){bd=dd;bestT=o}});return bestT}
+document.addEventListener('pointermove',e=>{
+  if(pending&&!drag&&Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>8){const r=ws.getBoundingClientRect();
+    const d=mkEl(pending.n,e.clientX-r.left,e.clientY-r.top);beginDrag(d,e);d.moved=true;pending=null}
+  if(!drag)return;const r=ws.getBoundingClientRect(),d=drag.d;
+  if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>4)d.moved=true;
+  d.style.left=(e.clientX-r.left)+'px';d.style.top=(e.clientY-r.top)+'px';
+  ws.querySelectorAll('.el.target').forEach(o=>o.classList.remove('target'));const sr=$('sea').getBoundingClientRect(),overSea=e.clientY>sr.top-6;$('sea').classList.toggle('hot',overSea);const t=overSea?null:overlapTarget(d);if(t)t.classList.add('target');
+});
+document.addEventListener('pointerup',e=>{
+  if(pending){const r=ws.getBoundingClientRect();spawn(pending.n,null,null,true);sfx.pop();pending=null;return}
+  if(!drag)return;const d=drag.d;drag=null;d.classList.remove('drag');ws.querySelectorAll('.el.can').forEach(o=>o.classList.remove('can'));ws.querySelectorAll('.el.target').forEach(o=>o.classList.remove('target'));
+  const r=ws.getBoundingClientRect();
+  const sr=$('sea').getBoundingClientRect();$('sea').classList.remove('hot');if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){d.remove();return}
+  if(e.clientY>sr.top-6){sfx.sink();d.classList.add('sinking');setTimeout(()=>d.remove(),500);return}
+  const t=overlapTarget(d);if(t&&d.moved)combine(d,t);
+});
+document.addEventListener('pointercancel',()=>{pending=null});
+function newFrom(n){return Object.keys(REC).filter(k=>{const [a,b]=k.split('+');return(a===n||b===n)&&!inv.includes(REC[k][0])&&inv.includes(a)&&inv.includes(b)})}
+function markPartners(n){const ok=new Set(newFrom(n).map(k=>{const [a,b]=k.split('+');return a===n?b:a}));ws.querySelectorAll('.el').forEach(o=>o.classList.toggle('can',ok.has(o.dataset.n)))}
+function saveRun(){if(phase==='end')return;store.set('cw_run',{date:TODAY,caught:inv.slice(BASE.length,BASE.length+(5-casts)),lucky:luckyGot,bonus:bonusT,stage:(phase==='fish'||phase==='arrive')?'fish':'craft',made,total,best})}
+let tutOn=false;function startTut(){const w=ws.clientWidth,h=ws.clientHeight;const a=spawn('Sand',w*.35,h*.42),b=spawn('Sun',w*.65,h*.42);[a,b].forEach(e=>e&&e.classList.add('tut'));tutOn=true;$('log').innerHTML='👉 Try it: drag <b>Sand</b> onto <b>Sun</b>'}
+let hintsLeft=3,pendingTimer=null;
+function updateHints(){list.querySelectorAll('.li').forEach(li=>{const c=newFrom(li.dataset.n).length,b=li.querySelector('.cnt');b.textContent=c||'';b.classList.toggle('done',!c)})}
+function combine(a,b){
+  const A=a.dataset.n,B=b.dataset.n,r=REC[[A,B].sort().join('+')];
+  if(!r){sfx.fail();[a,b].forEach(o=>{o.classList.remove('shake');void o.offsetWidth;o.classList.add('shake')});$('log').innerHTML=`${A} + ${B} = nothing...`;return}
+  const x=parseFloat(b.style.left),y=parseFloat(b.style.top);a.remove();b.remove();mkEl(r[0],x,y,true);
+  if(tutOn){tutOn=false;store.set('cw_tut',true);ws.querySelectorAll('.el.tut').forEach(o=>o.classList.remove('tut'))}
+  if(!inv.includes(r[0])){inv.push(r[0]);made.push(r[0]);setTimeout(saveRun,0);freshName=r[0];(r[1]>=100?sfx.special():sfx.win(r[1]));total+=r[1];if(!best||r[1]>best[1])best=r;$('score').textContent=total;
+    reveal(r[0],r[1]>=100?`★ SPECIAL · +${r[1]} PTS ★`:`NEW · +${r[1]} PTS`,r[1]>=100?'#ffc94d':'#5ee1ff',`${A} + ${B}`);$('log').innerHTML=`New: <b>${r[0]}</b> · +${r[1]} pts`;renderSide()}
+  else{sfx.pop();$('log').innerHTML=`${r[0]} (already discovered)`}
+}
+$('hintBtn').onclick=()=>{if(hintsLeft<=0)return;const opts=[];inv.forEach(n=>newFrom(n).forEach(k=>opts.push(k)));
+  if(!opts.length){$('log').textContent='No new combinations left - nice!';return}const k=opts[Math.floor(rnd()*opts.length)],[a,b]=k.split('+');hintsLeft--;
+  $('hintBtn').textContent='HINT ('+hintsLeft+')';$('log').innerHTML=`Hint: try <b>${a}</b> + <b>${b}</b>`;sfx.pop()};
+$('clear').onclick=()=>ws.querySelectorAll('.el').forEach(o=>o.remove());
+// everything reachable from the starting items
+function potential(start){const S=new Set(start);let sum=0,top=null,grew=true;
+  while(grew){grew=false;for(const k in REC){const [a,b]=k.split('+'),[res,p]=REC[k];
+    if(S.has(a)&&S.has(b)&&!S.has(res)){S.add(res);sum+=p;if(!top||p>top[1])top=[res,p];grew=true}}}return{sum,top}}
+function end(){
+  sfx.end();document.body.classList.remove('crafting');phase='end';timeLeft=0;$('craftUI').classList.add('hide');$('endUI').classList.remove('hide');$('hint').classList.add('hide');
+  $('phaseLbl').textContent='TIME\'S UP';$('log').textContent='';
+  const caught=inv.slice(BASE.length,BASE.length+5),RAR=Object.fromEntries(LOOT.map(l=>[l[0],l[1]]));
+  const RS=(()=>{const S=new Set([...BASE,...caught]);let g=true;while(g){g=false;for(const k in REC){const [a,b]=k.split('+');if(S.has(a)&&S.has(b)&&!S.has(REC[k][0])){S.add(REC[k][0]);g=true}}}return S})();
+  const teaser=[...RS].filter(n=>!inv.includes(n)&&PTS[n]).sort((a,b)=>PTS[b]-PTS[a]).slice(0,3);store.set('cw_tut',true);store.set('cw_run',null);
+  const before=new Set(codexList()),found=[...inv.filter(n=>!BASE.includes(n)),...luckyGot],fresh=found.filter(n=>!before.has(n));
+  store.set('cw_codex',[...before,...fresh]);store.set('cw_last_new',fresh);store.set('cw_played',TODAY);store.set('cw_last',{score:total,best:best?best[0]:null,fresh:fresh.length});
+  if(!DEV)$('againBtn').classList.add('hide');
+  $('eDate').textContent='CASTAWAY DAILY · '+TODAY;
+  $('eBest').innerHTML=best?`${img(best[0])}<div class="lbl">BEST CREATION</div><b>${best[0]}</b>`:`<div class="lbl" style="margin-top:12px">NO CREATIONS THIS TIME</div>`;
+  $('fScore').textContent=total;$('ePct').innerHTML=`${made.length} CREATIONS`;
+  $('eCatch').innerHTML=caught.map(n=>`<span style="--rc:${RCOL[RAR[n]]}">${img(n)}</span>`).join('');
+  $('eFinds').innerHTML=`<b>+${fresh.length}</b> new finds · ${before.size+fresh.length} in your collection`;
+  $('fNote').textContent='New catch tomorrow. Your finds are saved.';
+  $('codexEnd').onclick=showCodex;
+  const SQ={c:'⬜',u:'🟩',r:'🟦',e:'🟪',l:'🟨'};
+  const txt=`🏝 Castaway Daily · ${TODAY}\n🎣 ${caught.map(n=>SQ[RAR[n]]).join('')}\n⭐ ${total} pts · ${made.length} creations${best?`\n🏆 ${best[0]}`:''}`;
+  $('shareBtn').onclick=()=>{const done=()=>{$('shareBtn').textContent='COPIED!';setTimeout(()=>$('shareBtn').textContent='SHARE',1500)};
+    try{navigator.clipboard.writeText(txt).then(done,()=>{$('fNote').innerHTML='<textarea readonly style="width:100%;max-width:360px;height:90px;background:var(--panel);color:var(--ink);font-family:inherit">'+txt+'</textarea>';$('fNote').querySelector('textarea').select()})}catch(e){}};
+}
+
+// resume an unfinished run (stops refresh-rerolling once DEV is off)
+var RESUMED=false;
+(()=>{if(DEV)return;const run=store.get('cw_run',null);if(!run||run.date!==TODAY||store.get('cw_played',null)===TODAY)return;
+  RESUMED=true;run.caught.forEach((n,i)=>{const l=LOOT.find(x=>x[0]===n);pool=pool.filter(p=>p!==l);inv.push(n);const pip=$('pips').children[i];if(pip&&l){pip.style.background=RCOL[l[1]];pip.style.boxShadow=`0 0 8px ${RCOL[l[1]]}`}});
+  (run.lucky||[]).forEach(n=>{luckyGot.push(n);pool=pool.filter(p=>p[0]!==n)});bonusT=run.bonus||0;timeLeft+=bonusT;casts=5-run.caught.length;$('valL').textContent=casts;
+  if(run.stage==='craft'){run.made.forEach(n=>{inv.push(n);made.push(n)});total=run.total||0;best=run.best||null;phase='craft';end();return}
+  $('phaseLbl').textContent=casts?`CAST ${6-casts} OF 5`:'LAND AHOY';$('log').textContent='Welcome back! Your catch is saved.';
+  if(casts===0)setTimeout(()=>{phase='arrive'},500)})();
+</script></body></html>
