@@ -46,7 +46,7 @@ table{width:100%;border-collapse:collapse;font-size:20px}td{padding:6px 8px;bord
 #ws{position:relative;overflow:hidden;touch-action:none;box-shadow:inset 0 0 0 2px var(--line);background:#2c4257 !important;
  background:radial-gradient(ellipse at 50% 55%,#3f8f5f 0%,#2f7a55 30%,#c9ae6e 46%,#d9bf7f 52%,#3d86a8 60%,#1c4a6e 75%,#0e2540 100%)}
 #hintBtn{position:absolute;top:8px;left:8px;font-family:'Silkscreen';font-size:10px;letter-spacing:2px;background:var(--panel);color:var(--gold);border:2px solid var(--line);padding:6px 10px;cursor:pointer;z-index:5}
-.el.can img{filter:drop-shadow(0 0 2px #ffc94d) drop-shadow(0 0 6px rgba(255,201,77,.9));animation:canp .9s ease-in-out infinite}@keyframes canp{50%{transform:scale(1.08)}}.el.can span{color:var(--gold)}
+.el.can img{filter:drop-shadow(0 0 1px #ffc94d) drop-shadow(0 0 4px rgba(255,201,77,.6));animation:canp 1.1s ease-in-out infinite}@keyframes canp{50%{transform:scale(1.04)}}.el.can span{color:var(--gold)}
 .li{position:relative}.cnt{margin-left:6px;font-size:13px;color:#0b1628;background:var(--gold);padding:0 5px;border-radius:2px}.cnt.done{display:none}
 #list{position:relative}#ws,#side{min-width:0}
 body.crafting{overscroll-behavior:none}body.crafting #viewBtn{display:none}
@@ -75,6 +75,12 @@ canvas.shake{animation:shk .12s linear infinite}@keyframes shk{25%{transform:tra
 .teaser{display:flex;gap:10px;justify-content:center;margin-top:4px}.teaser div{text-align:center;font-size:13px;color:#3d5070}.teaser img{width:30px;height:30px;image-rendering:pixelated;filter:brightness(0);opacity:.45;display:block;margin:0 auto}
 body.crafting::after{display:none}
 .el.drag{will-change:left,top}
+#coach{pointer-events:none;position:absolute;left:50%;top:48px;transform:translateX(-50%);width:min(92%,420px);z-index:20;background:rgba(11,22,40,.95);box-shadow:inset 0 0 0 2px var(--gold),0 8px 30px rgba(0,0,0,.5);padding:12px 14px;font-size:18px;line-height:1.3;text-align:center}
+#coach .cstep{font-family:'Silkscreen';font-size:9px;letter-spacing:3px;color:var(--gold);margin-bottom:6px}#coach .btn{margin:12px auto 0;padding:10px 18px;font-size:12px}
+.cskip,#coach .btn{pointer-events:auto}.cskip{display:block;margin:8px auto 0;background:none;border:0;color:var(--dim);font-family:inherit;font-size:15px;text-decoration:underline;cursor:pointer}
+.tcat{display:inline-flex;gap:4px;vertical-align:middle}.tcat img{width:24px;height:24px;image-rendering:pixelated}
+.tutHi{outline:3px solid var(--gold);outline-offset:3px;animation:tutHiA 1s ease-in-out infinite}@keyframes tutHiA{50%{outline-color:rgba(255,201,77,.25)}}
+@media (max-width:640px){#coach{top:42px;font-size:14px;padding:6px 8px;line-height:1.2}#coach .cskip{font-size:13px;margin-top:4px}}
 #help{position:fixed;inset:0;z-index:70;background:rgba(5,10,20,.82);display:flex;align-items:center;justify-content:center;padding:16px}
 #help .box{background:var(--panel);box-shadow:inset 0 0 0 2px var(--cyan),0 0 40px rgba(94,225,255,.25);max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:20px 22px;line-height:1.25}
 #help h4{font-family:'Silkscreen';font-size:16px;letter-spacing:3px;color:var(--cyan);margin:0 0 12px}
@@ -630,7 +636,7 @@ function showLocked(){const L=store.get('cw_last',{score:0,best:null,fresh:0}),h
   <button class="btn2" id="lkCol">MY COLLECTION</button><a class="bmc" href="https://buymeacoffee.com/juulian" target="_blank" rel="noopener">☕ Enjoying the game? Buy me a coffee</a>${DEV?'<button class="btn2" id="lkDev" style="color:var(--dim)">PLAY ANYWAY (TEST)</button>':''}</div>`;
   document.body.appendChild(h);const iv=setInterval(()=>{const c=h.querySelector('#cd');if(!c)return clearInterval(iv);c.textContent=untilMidnight();if(untilMidnight()==='00:00:00')location.reload()},1000);
   h.querySelector('#lkCol').onclick=showCodex;const dv=h.querySelector('#lkDev');if(dv)dv.onclick=()=>{h.remove();showHelp(false)}}
-setTimeout(()=>{if(RESUMED)return;store.get('cw_played',null)===TODAY?showLocked():showHelp(false)},300);
+setTimeout(()=>{if(RESUMED)return;if(!store.get('cw_tut2',false))return showIntro();store.get('cw_played',null)===TODAY?showLocked():showHelp(false)},300);
 // ---------- reveal ----------
 let revTO;function reveal(n,sub,col,flav){$('rimg').src=IMG[n].toDataURL();$('rimg').style.filter=`drop-shadow(0 0 12px ${col})`;
   $('rname').textContent=n.toUpperCase();$('rname').style.color=col;$('rname').style.textShadow=`0 0 14px ${col}`;
@@ -669,11 +675,11 @@ const ws=$('ws'),list=$('list');let drag=null,pending=null;
 function startCraft(){sfx.land();document.body.classList.add('crafting');window.scrollTo(0,0);const mb=$('mute');ws.appendChild(mb);mb.style.cssText+=';position:absolute;top:8px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);z-index:5';REACH=(()=>{const S=new Set(inv);let g=true;while(g){g=false;for(const k in REC){const [a,b]=k.split('+');if(S.has(a)&&S.has(b)&&!S.has(REC[k][0])){S.add(REC[k][0]);g=true}}}return S})();
   setTimeout(()=>{$('stage').classList.add('hide');$('hint').classList.add('hide');$('craftUI').classList.remove('hide');renderSide();
     // seed workspace with the 5 catches
-    const r=ws.getBoundingClientRect();inv.filter(n=>!BASE.includes(n)).forEach(n=>spawn(n,null,null));updateHints()},600);
+    const r=ws.getBoundingClientRect();if(!TUT)inv.filter(n=>!BASE.includes(n)).forEach(n=>spawn(n,null,null));updateHints()},600);
   $('lblL').textContent='TIME';$('valL').textContent=timeLeft+'s';$('phaseLbl').textContent='BUILD YOUR ISLAND';
   $('log').textContent='';
   pendingTimer=()=>{const iv=setInterval(()=>{timeLeft--;$('valL').textContent=timeLeft+'s';if(timeLeft<=10){$('valL').style.color='var(--pink)';sfx.tick()}if(timeLeft%3==0)updateHints();if(timeLeft<=0){clearInterval(iv);end()}},1000)};
-  setTimeout(()=>{if(!store.get('cw_tut',false))showHelp(true);else{pendingTimer();pendingTimer=null}},700);saveRun();
+  setTimeout(()=>{if(TUT){$('valL').textContent='—';coachStart();return}if(!store.get('cw_tut',false))showHelp(true);else{pendingTimer();pendingTimer=null}},700);saveRun();
 }
 let REACH=new Set();
 let IDX=null;function idx(){if(IDX)return IDX;IDX={};for(const k in REC){const [a,b]=k.split('+');(IDX[a]=IDX[a]||[]).push([b,k]);if(a!==b)(IDX[b]=IDX[b]||[]).push([a,k])}return IDX}
@@ -696,10 +702,10 @@ function mkEl(n,x,y,pop){{const W2=ws.clientWidth,H2=ws.clientHeight,sea=$('sea'
   return d}
 function freeSpot(cx,cy){const els=[...ws.querySelectorAll('.el:not(.sinking)')].map(o=>[parseFloat(o.style.left),parseFloat(o.style.top)]);const r=ws.getBoundingClientRect();
   for(let i=0;i<400;i++){const a=i*2.4,d=i?18+i*4:0,x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d*.8;
-    if(x<34||y<70||x>r.width-34||y>r.height-($('sea').offsetHeight+40))continue;if(els.every(([ex,ey])=>Math.abs(ex-x)>GX()||Math.abs(ey-y)>GY()))return[x,y]}return[cx,cy]}
+    if(x<34||y<((typeof TUT!=='undefined'&&TUT&&$('coach'))?$('coach').offsetTop+$('coach').offsetHeight+40:70)||x>r.width-34||y>r.height-($('sea').offsetHeight+40))continue;if(els.every(([ex,ey])=>Math.abs(ex-x)>GX()||Math.abs(ey-y)>GY()))return[x,y]}return[cx,cy]}
 const GX=()=>ws.clientWidth<500?58:86,GY=()=>ws.clientWidth<500?62:96;
 function anySpot(){const r=ws.getBoundingClientRect(),els=[...ws.querySelectorAll('.el:not(.sinking)')].map(o=>[parseFloat(o.style.left),parseFloat(o.style.top)]);
-  const c=[];for(let y=70;y<=r.height-($('sea').offsetHeight+42);y+=34)for(let x=38;x<=r.width-38;x+=34)c.push([x+(rnd()-.5)*14,y+(rnd()-.5)*14]);
+  const c=[];const minY=(typeof TUT!=='undefined'&&TUT&&$('coach'))?$('coach').offsetTop+$('coach').offsetHeight+40:70;for(let y=minY;y<=r.height-($('sea').offsetHeight+42);y+=34)for(let x=38;x<=r.width-38;x+=34)c.push([x+(rnd()-.5)*14,y+(rnd()-.5)*14]);
   const sc=p=>Math.min(1e9,...els.map(([ex,ey])=>Math.max(Math.abs(ex-p[0])/GX(),Math.abs(ey-p[1])/GY())));
   const free=c.filter(p=>sc(p)>=1);if(free.length)return free[Math.floor(rnd()*free.length)];
   const best=c.reduce((a,b)=>sc(b)>sc(a)?b:a,c[0]);if(sc(best)<.6)return null;return best;
@@ -728,7 +734,7 @@ document.addEventListener('pointercancel',()=>{pending=null});
 function newFrom(n){const I=idx()[n]||[],iv=new Set(inv);return I.filter(([o,k])=>iv.has(o)&&!iv.has(REC[k][0])).map(x=>x[1])}
 function _oldNew(n){return Object.keys(REC).filter(k=>{const [a,b]=k.split('+');return(a===n||b===n)&&!inv.includes(REC[k][0])&&inv.includes(a)&&inv.includes(b)})}
 function markPartners(n){const ok=new Set(newFrom(n).map(k=>{const [a,b]=k.split('+');return a===n?b:a}));ws.querySelectorAll('.el').forEach(o=>o.classList.toggle('can',ok.has(o.dataset.n)))}
-function saveRun(){if(phase==='end')return;store.set('cw_run',{date:TODAY,caught:inv.slice(BASE.length,BASE.length+(5-casts)),lucky:luckyGot,bonus:bonusT,stage:(phase==='fish'||phase==='arrive')?'fish':'craft',made,total,best})}
+function saveRun(){if(phase==='end'||TUT)return;store.set('cw_run',{date:TODAY,caught:inv.slice(BASE.length,BASE.length+(5-casts)),lucky:luckyGot,bonus:bonusT,stage:(phase==='fish'||phase==='arrive')?'fish':'craft',made,total,best})}
 let tutOn=false;function startTut(){const w=ws.clientWidth,h=ws.clientHeight;const a=spawn('Sand',w*.35,h*.42),b=spawn('Sun',w*.65,h*.42);[a,b].forEach(e=>e&&e.classList.add('tut'));tutOn=true;$('log').innerHTML='👉 Try it: drag <b>Sand</b> onto <b>Sun</b>'}
 let hintsLeft=3,pendingTimer=null;
 function updateHints(){list.querySelectorAll('.li').forEach(li=>{const c=newFrom(li.dataset.n).length,b=li.querySelector('.cnt');b.textContent=c||'';b.classList.toggle('done',!c)})}
@@ -770,6 +776,36 @@ function end(){
   $('shareBtn').onclick=()=>{const done=()=>{$('shareBtn').textContent='COPIED!';setTimeout(()=>$('shareBtn').textContent='SHARE',1500)};
     try{navigator.clipboard.writeText(txt).then(done,()=>{$('fNote').innerHTML='<textarea readonly style="width:100%;max-width:360px;height:90px;background:var(--panel);color:var(--ink);font-family:inherit">'+txt+'</textarea>';$('fNote').querySelector('textarea').select()})}catch(e){}};
 }
+
+// ---------- first-visit tutorial ----------
+var TUT=false;const TUT_CATCH=['Shell','Starfish','Coconut','Egg','Banana Peel'];
+function tutDone(){store.set('cw_tut2',true);store.set('cw_tut',true);location.reload()}
+function showIntro(){const h=document.createElement('div');h.id='help';
+  h.innerHTML=`<div class="box" style="text-align:center"><h4>WELCOME TO CASTAWAY</h4><p style="margin:0 0 6px">Every day you fish 5 items from your raft, then craft them into new things on an island.</p><p style="color:var(--dim);margin:0">Want a 1-minute walkthrough?</p>
+  <button class="btn" id="tGo">SHOW ME HOW ▶</button><button class="btn2" id="tSkip">SKIP, I KNOW HOW</button></div>`;document.body.appendChild(h);
+  h.querySelector('#tGo').onclick=()=>{sfx.open();h.remove();beginTutorial()};
+  h.querySelector('#tSkip').onclick=()=>{h.remove();store.set('cw_tut2',true);showHelp(false)}}
+function beginTutorial(){TUT=true;store.set('cw_tut',true);TUT_CATCH.forEach((n,i)=>{inv.push(n);const l=LOOT.find(x=>x[0]===n),p=$('pips').children[i];if(p&&l){p.style.background=RCOL[l[1]]}});casts=0;$('hint').classList.add('hide');phase='craft';startCraft()}
+const cntB=n=>ws.querySelectorAll(`.el[data-n="${n}"]:not(.fading):not(.sinking)`).length;
+const elB=n=>ws.querySelector(`.el[data-n="${n}"]:not(.fading)`);
+let tStep=0,tIv=null,tWait=0;
+const TSTEPS=[
+ {t:()=>`Your 5 catches: <span class="tcat">${TUT_CATCH.map(img).join('')}</span><br>They're in your item list with the island basics. <b>Tap Wood</b> in the list.`,hi:()=>list.querySelector('.li[data-n="Wood"]'),done:()=>cntB('Wood')>=1},
+ {t:()=>`<b>Double-tap the Wood</b> on the board to copy it.`,hi:()=>elB('Wood'),done:()=>cntB('Wood')>=2},
+ {t:()=>`Now <b>drag one Wood onto the other</b> to combine them.`,hi:()=>elB('Wood'),done:()=>inv.includes('Planks')},
+ {t:()=>`You made <b>Planks</b> and scored points! <b>Double-tap the Planks</b> to copy them.`,hi:()=>elB('Planks'),done:()=>cntB('Planks')>=2},
+ {t:()=>`<b>Drag Planks onto Planks.</b>`,hi:()=>elB('Planks'),done:()=>inv.includes('Raft')},
+ {t:()=>`A <b>Raft</b>! With today's items it can't make anything new, so it's <b>maxed</b> and fades away. That keeps your board tidy.`,wait:4200},
+ {t:()=>`Now mix a <b>catch</b> with a <b>basic</b>: tap <b>Coconut</b> and <b>Sand</b> in the list, then drag one onto the other.`,hi:()=>!cntB('Coconut')?list.querySelector('.li[data-n="Coconut"]'):!cntB('Sand')?list.querySelector('.li[data-n="Sand"]'):elB('Coconut'),done:()=>inv.includes('Palm Tree')},
+ {t:()=>`🌴 A <b>Palm Tree</b>! Mixing your catches with the basics unlocks most creations.<br>That's it!<br>✨ Holding an item, a <span style="color:var(--gold)">gold glow</span> shows what it combines with.<br><span class="demo">3</span> = new things an item can still make.<br>🌊 Drag items into the sea to clear the board.<br><b>You get 2 minutes each day. Have fun!</b>`,end:true},
+];
+function coachStart(){const c=document.createElement('div');c.id='coach';ws.appendChild(c);tStep=0;coachShow();
+  tIv=setInterval(()=>{const S=TSTEPS[tStep];document.querySelectorAll('.tutHi').forEach(e=>e.classList.remove('tutHi'));
+    if(S.hi){const e=S.hi();if(e)e.classList.add('tutHi')}
+    if(S.done&&S.done()){tStep++;coachShow()}else if(S.wait&&Date.now()>tWait){tStep++;coachShow()}},250)}
+function coachShow(){const S=TSTEPS[tStep],c=$('coach');if(S.wait)tWait=Date.now()+S.wait;
+  c.innerHTML=`<div class="cstep">STEP ${Math.min(tStep+1,TSTEPS.length)} / ${TSTEPS.length}</div><div>${S.t()}</div>${S.end?'<button class="btn" id="cEnd">START FISHING ▶</button>':'<button class="cskip" id="cSkip">Skip tutorial</button>'}`;
+  const e=c.querySelector('#cEnd');if(e)e.onclick=()=>{clearInterval(tIv);tutDone()};const k=c.querySelector('#cSkip');if(k)k.onclick=()=>{clearInterval(tIv);tutDone()};sfx.pop()}
 
 // resume an unfinished run (stops refresh-rerolling once DEV is off)
 var RESUMED=false;
