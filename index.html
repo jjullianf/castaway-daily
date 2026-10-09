@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Castaway Daily</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA90lEQVR4nGMUc0v7zzCAgGkgLWdgYGBgIVahpMl7rOLPzwhS5IDBHwIwn8vrieNQ8ZKBgQEREughRSiEBn8IIHwA8anNqXMMDAwMDEfMjFDkcYcUagihg8EfAjCA7gPcfNSQeggNKVxg6IQAsYBQSKGDoRMChysloawYCNW6hIGBgYEhrzoGq/pJraj6bNufY1U34CHAiKs2RPiYugA9JAZfCNDK5+gAFhIDHgIYuaBVqYGBgYGBofpeA1Utgpm7IzUdRXzAQwBnLvCYPROFT2qIwHwMA+g+h4HBGwLoAD1EiAW4fA4DQycEaAUGPARGHTDqgFEHAACJqEqVK+F6HAAAAABJRU5ErkJggg=="><link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALAAAACwCAYAAACvt+ReAAAC4klEQVR4nO3cMWoWQQCG4US8gE0kleABLESstA0ewtbY2Usamx97O7H1EPamCuIRBKtg5RFi4QV2osPuuzxPPSxD8jLNB//xydn5zRFE3Vn7AvAvBEyagEkTMGkCJk3ApAmYNAGTJmDSBEza3bUvMNPpk99rX+Ho+tu9ta+wa15g0gRMmoBJEzBpAiZNwKQJmDQBkyZg0gRMWm5KHpmHHzy6P/EmS/1afHJkdp41k9emby8waQImTcCkCZg0AZMmYNIETJqASRMwaQImLTclj02dy2fcZ1ffF5+9fPp48dlZ8/C8mXzO9D2LF5g0AZMmYNIETJqASRMwaQImTcCkCZg0AZOWm5JHzJo6t/HdOTP5z4GZfAu8wKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQJmLRdT8l7to05e31eYNIETJqASRMwaQImTcCkCZg0AZMmYNIETNqup+Svb08HTr9cfvTwefHRNxcD353kw2H52ZG/2fP317e4zf/lBSZNwKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQdn5yd36x9ibHJl6JZs7MXmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkzZtSjYPc1sjs7MXmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkzbtB64PD98tPnvxY/lZtmPkf/zl1espd/ACkyZg0gRMmoBJEzBpAiZNwKQJmDQBkyZg0jbxA9cvPn2c8l0T9V8jk++IWfPwCC8waQImTcCkCZg0AZMmYNIETJqASRMwaQImbRNT8iyzJuo928I8PMILTJqASRMwaQImTcCkCZg0AZMmYNIETJqASdv1lMz+eYFJEzBpAiZNwKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkyZg0gRMmoBJEzBpAiZNwKQJmDQBkyZg0gRMmoBJEzBpAibtD3BrS7W2JsIqAAAAAElFTkSuQmCC">
 
@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at 50% 0%,#17365a 0%,var(--bg) 55%,var(--deep) 100%);color:var(--ink);font-family:'VT323',monospace;font-size:20px}
 body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);z-index:50}
-html,body{overflow-x:hidden}#app{max-width:var(--appw,760px);margin:0 auto;padding:14px 16px 40px;overflow-x:hidden}
+html,body{overflow-x:hidden;touch-action:manipulation}*{touch-action:manipulation}#app{max-width:var(--appw,760px);margin:0 auto;padding:14px 16px 40px;overflow-x:hidden}
 .hud{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:10px;margin-bottom:12px}
 .panel{background:var(--panel);padding:8px 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);box-shadow:inset 0 0 0 2px var(--line)}
 .lbl{font-family:'Silkscreen';font-size:10px;letter-spacing:3px;color:var(--dim)}
@@ -158,6 +158,9 @@ body.crafting::after{display:none}
 </div>
 <script>
 const rnd=Math.random;
+try{const vm=document.querySelector('meta[name=viewport]');if(vm&&!/maximum-scale/.test(vm.content))vm.content+=',maximum-scale=1,user-scalable=no'}catch(e){}
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+let _lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-_lt<350&&e.cancelable)e.preventDefault();_lt=n},{passive:false});
 const HT=location.hash.slice(1).split('-');const DEV=true; // set to false at launch: locks the game after one play per day
 let RANDOM=true;
 const VIEW=HT.includes('desktop')?'desktop':HT.includes('mobile')?'mobile':'auto';
@@ -741,6 +744,8 @@ let tutOn=false;function startTut(){const w=ws.clientWidth,h=ws.clientHeight;con
 let hintsLeft=3,pendingTimer=null;
 function updateHints(){list.querySelectorAll('.li').forEach(li=>{const c=newFrom(li.dataset.n).length,b=li.querySelector('.cnt');b.textContent=c||'';b.classList.toggle('done',!c)})}
 function combine(a,b){
+  if(typeof TUT!=='undefined'&&TUT){const need=(TSTEPS[tStep]||{}).pair,k=[a.dataset.n,b.dataset.n].sort().join('+');
+    if(!need||k!==need){sfx.fail();[a,b].forEach(o=>{o.classList.remove('shake');void o.offsetWidth;o.classList.add('shake')});$('log').textContent='Follow the step above 👆';return}}
   const A=a.dataset.n,B=b.dataset.n,r=REC[[A,B].sort().join('+')];
   if(!r){sfx.fail();[a,b].forEach(o=>{o.classList.remove('shake');void o.offsetWidth;o.classList.add('shake')});$('log').innerHTML=`${A} + ${B} = nothing...`;return}
   const x=parseFloat(b.style.left),y=parseFloat(b.style.top);a.remove();b.remove();mkEl(r[0],x,y,true);
@@ -793,12 +798,12 @@ const elB=n=>ws.querySelector(`.el[data-n="${n}"]:not(.fading)`);
 let tStep=0,tIv=null,tWait=0;
 const TSTEPS=[
  {t:()=>`Your 5 catches: <span class="tcat">${TUT_CATCH.map(img).join('')}</span><br>They're in your item list with the island basics. <b>Tap Wood</b> in the list.`,hi:()=>list.querySelector('.li[data-n="Wood"]'),done:()=>cntB('Wood')>=1},
- {t:()=>`<b>Double-tap the Wood</b> on the board to copy it.`,hi:()=>elB('Wood'),done:()=>cntB('Wood')>=2},
- {t:()=>`Now <b>drag one Wood onto the other</b> to combine them.`,hi:()=>elB('Wood'),done:()=>inv.includes('Planks')},
- {t:()=>`You made <b>Planks</b> and scored points! <b>Double-tap the Planks</b> to copy them.`,hi:()=>elB('Planks'),done:()=>cntB('Planks')>=2},
- {t:()=>`<b>Drag Planks onto Planks.</b>`,hi:()=>elB('Planks'),done:()=>inv.includes('Raft')},
+ {t:()=>`You need a second Wood: <b>double-tap the Wood</b> on the board, or <b>tap Wood in the list again</b>.`,hi:()=>elB('Wood'),done:()=>cntB('Wood')>=2},
+ {pair:'Wood+Wood',t:()=>`Now <b>drag one Wood onto the other</b> to combine them.`,hi:()=>elB('Wood'),done:()=>inv.includes('Planks')},
+ {hi2:1,t:()=>`You made <b>Planks</b> and scored points! Get a second one: <b>double-tap the Planks</b> or <b>tap Planks in the list</b>.`,hi:()=>elB('Planks'),done:()=>cntB('Planks')>=2},
+ {pair:'Planks+Planks',t:()=>`<b>Drag Planks onto Planks.</b>`,hi:()=>elB('Planks'),done:()=>inv.includes('Raft')},
  {t:()=>`A <b>Raft</b>! With today's items it can't make anything new, so it's <b>maxed</b> and fades away. That keeps your board tidy.`,wait:4200},
- {t:()=>`Now mix a <b>catch</b> with a <b>basic</b>: tap <b>Coconut</b> and <b>Sand</b> in the list, then drag one onto the other.`,hi:()=>!cntB('Coconut')?list.querySelector('.li[data-n="Coconut"]'):!cntB('Sand')?list.querySelector('.li[data-n="Sand"]'):elB('Coconut'),done:()=>inv.includes('Palm Tree')},
+ {pair:'Coconut+Sand',t:()=>`Now mix a <b>catch</b> with a <b>basic</b>: tap <b>Coconut</b> and <b>Sand</b> in the list, then drag one onto the other.`,hi:()=>!cntB('Coconut')?list.querySelector('.li[data-n="Coconut"]'):!cntB('Sand')?list.querySelector('.li[data-n="Sand"]'):elB('Coconut'),done:()=>inv.includes('Palm Tree')},
  {t:()=>`🌴 A <b>Palm Tree</b>! Mixing your catches with the basics unlocks most creations.<br>That's it!<br>✨ Holding an item, a <span style="color:var(--gold)">gold glow</span> shows what it combines with.<br><span class="demo">3</span> = new things an item can still make.<br>🌊 Drag items into the sea to clear the board.<br><b>You get 2 minutes each day. Have fun!</b>`,end:true},
 ];
 function coachStart(){const c=document.createElement('div');c.id='coach';ws.appendChild(c);tStep=0;coachShow();
@@ -806,7 +811,7 @@ function coachStart(){const c=document.createElement('div');c.id='coach';ws.appe
     if(S.hi){const e=S.hi();if(e)e.classList.add('tutHi')}
     if(S.done&&S.done()){tStep++;coachShow()}else if(S.wait&&Date.now()>tWait){tStep++;coachShow()}},250)}
 function coachShow(){const S=TSTEPS[tStep],c=$('coach');if(S.wait)tWait=Date.now()+S.wait;
-  c.innerHTML=`<div class="cstep">STEP ${Math.min(tStep+1,TSTEPS.length)} / ${TSTEPS.length}</div><div>${S.t()}</div>${S.end?'<button class="btn" id="cEnd">START FISHING ▶</button>':'<button class="cskip" id="cSkip">Skip tutorial</button>'}`;
+  c.innerHTML=`<div class="cstep">STEP ${Math.min(tStep+1,TSTEPS.length)} / ${TSTEPS.length}</div><div>${S.t()}</div>${S.end?'<button class="btn" id="cEnd">LET\'S PLAY ▶</button>':'<button class="cskip" id="cSkip">Skip tutorial</button>'}`;
   const e=c.querySelector('#cEnd');if(e)e.onclick=()=>{clearInterval(tIv);tutDone()};const k=c.querySelector('#cSkip');if(k)k.onclick=()=>{clearInterval(tIv);tutDone()};sfx.pop()}
 
 // resume an unfinished run (stops refresh-rerolling once DEV is off)
